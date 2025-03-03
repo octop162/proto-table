@@ -1,0 +1,161 @@
+import { useState } from 'react'
+import { TableData, CellData, Position } from '../types/table'
+
+/**
+ * テーブルデータを管理するカスタムフック
+ * @param initialData 初期データ
+ * @returns テーブルデータと操作関数
+ */
+export const useTableData = (initialData: TableData) => {
+  const [data, setData] = useState<TableData>(initialData)
+
+  /**
+   * セルの値を更新
+   * @param rowIndex 行インデックス
+   * @param colIndex 列インデックス
+   * @param value 新しい値
+   */
+  const updateCell = (rowIndex: number, colIndex: number, value: CellData['value']) => {
+    const newData = [...data]
+    newData[rowIndex][colIndex] = {
+      ...newData[rowIndex][colIndex],
+      value
+    }
+    setData(newData)
+  }
+
+  /**
+   * 複数のセルの値を更新
+   * @param positions 更新するセルの位置の配列
+   * @param value 新しい値
+   */
+  const updateMultipleCells = (positions: Position[], value: CellData['value']) => {
+    const newData = [...data]
+    positions.forEach(({ row, col }) => {
+      newData[row][col] = {
+        ...newData[row][col],
+        value
+      }
+    })
+    setData(newData)
+  }
+
+  /**
+   * 行を追加
+   */
+  const addRow = () => {
+    const newRow = Array(data[0].length).fill(null).map(() => ({
+      value: '',
+      isEditing: false
+    }))
+    
+    const newData = [...data, newRow]
+    setData(newData)
+  }
+
+  /**
+   * 列を追加
+   */
+  const addColumn = () => {
+    const newData = data.map(row => [
+      ...row,
+      {
+        value: '',
+        isEditing: false
+      }
+    ])
+    
+    setData(newData)
+  }
+
+  /**
+   * 行を削除
+   */
+  const removeRow = () => {
+    if (data.length <= 1) return
+    
+    const newData = [...data]
+    newData.pop()
+    setData(newData)
+  }
+
+  /**
+   * 列を削除
+   */
+  const removeColumn = () => {
+    if (data[0].length <= 1) return
+    
+    const newData = data.map(row => {
+      const newRow = [...row]
+      newRow.pop()
+      return newRow
+    })
+    
+    setData(newData)
+  }
+
+  /**
+   * 文字列データをテーブルにペースト
+   * @param text ペーストするテキスト
+   * @param startRow 開始行
+   * @param startCol 開始列
+   */
+  const pasteData = (text: string, startRow: number, startCol: number) => {
+    const rows = text.split('\n').filter(row => row.trim() !== '')
+    const newData = [...data]
+
+    rows.forEach((row, rowOffset) => {
+      const cells = row.split('\t')
+      cells.forEach((cellValue, colOffset) => {
+        const targetRow = startRow + rowOffset
+        const targetCol = startCol + colOffset
+
+        // テーブルの範囲内かチェック
+        if (targetRow < newData.length && targetCol < newData[0].length) {
+          newData[targetRow][targetCol] = {
+            ...newData[targetRow][targetCol],
+            value: cellValue
+          }
+        }
+      })
+    })
+
+    setData(newData)
+  }
+
+  /**
+   * 選択範囲のデータをコピー
+   * @param startPos 開始位置
+   * @param endPos 終了位置
+   * @returns コピーしたデータの文字列
+   */
+  const copyData = (startPos: Position, endPos: Position): string => {
+    const minRow = Math.min(startPos.row, endPos.row)
+    const maxRow = Math.max(startPos.row, endPos.row)
+    const minCol = Math.min(startPos.col, endPos.col)
+    const maxCol = Math.max(startPos.col, endPos.col)
+
+    let result = ''
+    for (let i = minRow; i <= maxRow; i++) {
+      const rowData = []
+      for (let j = minCol; j <= maxCol; j++) {
+        rowData.push(data[i][j].value)
+      }
+      result += rowData.join('\t') + '\n'
+    }
+
+    return result
+  }
+
+  return {
+    data,
+    updateCell,
+    updateMultipleCells,
+    addRow,
+    addColumn,
+    removeRow,
+    removeColumn,
+    pasteData,
+    copyData
+  }
+} 

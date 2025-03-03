@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 技術スタック
+- UIライブラリ: React + TypeScript
+- スタイリング: CSS Modules
+- 状態管理: React Context
+- テスト: Vitest, React Testing Library
+- グリッドレイアウト: Handsontable
