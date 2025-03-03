@@ -55,6 +55,29 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     updateMultipleCells(positions, '')
   }
 
+  // 初期状態ではisEditingはfalse
+  const isEditingRef = useRef(false)
+  
+  // クリップボード操作の管理
+  const { 
+    copySelectedCells, 
+    cutSelectedCells,
+    pasteToSelectedCells
+  } = useClipboard(data, selection, updateCell, updateMultipleCells)
+  
+  // キーボードイベントの管理（初期設定）
+  const { getPendingKey, updateHandlers } = useKeyboardEvents(data, {
+    moveSelection,
+    setShiftKey,
+    copySelectedCells,
+    cutSelectedCells,
+    pasteToSelectedCells,
+    startEditing: () => {},  // 後で上書き
+    stopEditing: () => {},  // 後で上書き
+    clearSelectedCells,
+    isEditing: isEditingRef.current  // 初期状態
+  })
+  
   // セル編集の管理
   const { 
     isEditing,
@@ -62,25 +85,19 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     stopEditing,
     handleCompositionStart,
     handleCompositionEnd
-  } = useCellEditing(data, currentCell, updateCell)
+  } = useCellEditing(data, currentCell, updateCell, getPendingKey)
   
-  // キーボードイベントの管理
-  const { getPendingKey } = useKeyboardEvents(data, {
-    moveSelection,
-    setShiftKey,
-    copySelectedCells: () => {},  // 後で上書き
-    pasteToSelectedCells: () => {},  // 後で上書き
-    startEditing,
-    stopEditing,
-    clearSelectedCells,
-    isEditing
-  })
-  
-  // クリップボード操作の管理
-  const { 
-    copySelectedCells, 
-    pasteToSelectedCells
-  } = useClipboard(data, selection, updateCell)
+  // ハンドラーを更新
+  useEffect(() => {
+    updateHandlers({
+      isEditing,
+      startEditing,
+      stopEditing,
+      copySelectedCells,
+      cutSelectedCells,
+      pasteToSelectedCells
+    })
+  }, [isEditing, startEditing, stopEditing, copySelectedCells, cutSelectedCells, pasteToSelectedCells, updateHandlers])
 
   // マウスダウンイベントハンドラー（Shiftキーの状態を取得）
   const handleCellMouseDown = (rowIndex: number, colIndex: number, e: MouseEvent) => {
@@ -133,6 +150,9 @@ export const Table: FC<TableProps> = ({ initialData }) => {
         <div className={styles.toolbarGroup}>
           <button onClick={() => copySelectedCells()} className={styles.toolbarButton} disabled={!selection} title="コピー">
             コピー
+          </button>
+          <button onClick={() => cutSelectedCells()} className={styles.toolbarButton} disabled={!selection} title="カット">
+            カット
           </button>
           <button 
             onClick={() => {

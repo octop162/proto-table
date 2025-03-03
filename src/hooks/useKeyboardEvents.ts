@@ -5,6 +5,7 @@ type KeyboardEventHandlers = {
   moveSelection: (direction: 'up' | 'down' | 'left' | 'right') => void
   setShiftKey: (pressed: boolean) => void
   copySelectedCells: () => void
+  cutSelectedCells?: () => void
   pasteToSelectedCells: () => void
   startEditing: () => void
   stopEditing: (save?: boolean) => void
@@ -23,40 +24,45 @@ export const useKeyboardEvents = (
   const isComposingRef = useRef(false)
   const pendingKeyRef = useRef<string | null>(null)
   const isEditingRef = useRef(handlers.isEditing)
+  const handlersRef = useRef(handlers)
 
-  // isEditingの値が変わったときにrefを更新
+  // handlersの値が変わったときにrefを更新
   useEffect(() => {
+    handlersRef.current = handlers
     isEditingRef.current = handlers.isEditing
-  }, [handlers.isEditing])
+  }, [handlers])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 最新のハンドラーを使用
+      const currentHandlers = handlersRef.current
+
       // IME入力中はキーボードイベントを処理しない
       if (isComposingRef.current) return
 
       // Shiftキーの状態を追跡
       if (e.key === 'Shift') {
-        handlers.setShiftKey(true)
+        currentHandlers.setShiftKey(true)
       }
 
       // 編集モード中の特別な処理
       if (isEditingRef.current) {
         if (e.key === 'Escape') {
           e.preventDefault()
-          handlers.stopEditing(false)
+          currentHandlers.stopEditing(false)
         } else if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault()
-          handlers.stopEditing(true)
+          currentHandlers.stopEditing(true)
           // Enterキーを押したら下のセルに移動
-          handlers.moveSelection('down')
+          currentHandlers.moveSelection('down')
         } else if (e.key === 'Tab') {
           e.preventDefault()
-          handlers.stopEditing(true)
+          currentHandlers.stopEditing(true)
           // Tabキーを押したら右のセルに移動（Shift+Tabなら左に移動）
           if (e.shiftKey) {
-            handlers.moveSelection('left')
+            currentHandlers.moveSelection('left')
           } else {
-            handlers.moveSelection('right')
+            currentHandlers.moveSelection('right')
           }
         }
         return
@@ -66,58 +72,72 @@ export const useKeyboardEvents = (
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault()
-          handlers.moveSelection('up')
+          currentHandlers.moveSelection('up')
           break
         case 'ArrowDown':
           e.preventDefault()
-          handlers.moveSelection('down')
+          currentHandlers.moveSelection('down')
           break
         case 'ArrowLeft':
           e.preventDefault()
-          handlers.moveSelection('left')
+          currentHandlers.moveSelection('left')
           break
         case 'ArrowRight':
           e.preventDefault()
-          handlers.moveSelection('right')
+          currentHandlers.moveSelection('right')
           break
         case 'Enter':
         case 'F2':
           e.preventDefault()
-          handlers.startEditing()
+          currentHandlers.startEditing()
           break
         case 'Delete':
         case 'Backspace':
           e.preventDefault()
-          handlers.clearSelectedCells()
+          currentHandlers.clearSelectedCells()
           break
         case 'Tab':
           e.preventDefault()
           if (e.shiftKey) {
-            handlers.moveSelection('left')
+            currentHandlers.moveSelection('left')
           } else {
-            handlers.moveSelection('right')
+            currentHandlers.moveSelection('right')
           }
           break
         case 'c':
           if (e.ctrlKey || e.metaKey) {
             e.preventDefault()
-            handlers.copySelectedCells()
+            currentHandlers.copySelectedCells()
           } else {
             // 直接入力の場合
             e.preventDefault() // テスト用にpreventDefaultを呼び出す
             pendingKeyRef.current = e.key
-            handlers.startEditing()
+            currentHandlers.startEditing()
+          }
+          break
+        case 'x':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            // カット機能が提供されている場合はそれを使用
+            if (currentHandlers.cutSelectedCells) {
+              currentHandlers.cutSelectedCells()
+            }
+          } else {
+            // 直接入力の場合
+            e.preventDefault() // テスト用にpreventDefaultを呼び出す
+            pendingKeyRef.current = e.key
+            currentHandlers.startEditing()
           }
           break
         case 'v':
           if (e.ctrlKey || e.metaKey) {
             e.preventDefault()
-            handlers.pasteToSelectedCells()
+            currentHandlers.pasteToSelectedCells()
           } else {
             // 直接入力の場合
             e.preventDefault() // テスト用にpreventDefaultを呼び出す
             pendingKeyRef.current = e.key
-            handlers.startEditing()
+            currentHandlers.startEditing()
           }
           break
         // 文字入力を開始した場合（通常の文字キー）
@@ -127,7 +147,7 @@ export const useKeyboardEvents = (
             e.preventDefault()
             // 入力された文字を保存
             pendingKeyRef.current = e.key
-            handlers.startEditing()
+            currentHandlers.startEditing()
           }
           break
       }
@@ -135,7 +155,7 @@ export const useKeyboardEvents = (
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Shift') {
-        handlers.setShiftKey(false)
+        handlersRef.current.setShiftKey(false)
       }
     }
 
@@ -158,13 +178,17 @@ export const useKeyboardEvents = (
       document.removeEventListener('compositionstart', handleCompositionStart)
       document.removeEventListener('compositionend', handleCompositionEnd)
     }
-  }, [data, handlers])
+  }, []) // 依存配列を空にして、ハンドラーの参照はrefで管理
 
   return {
     getPendingKey: () => {
       const key = pendingKeyRef.current
       pendingKeyRef.current = null
       return key
+    },
+    updateHandlers: (newHandlers: Partial<KeyboardEventHandlers>) => {
+      handlersRef.current = { ...handlersRef.current, ...newHandlers }
+      isEditingRef.current = handlersRef.current.isEditing
     }
   }
 } 

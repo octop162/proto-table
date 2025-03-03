@@ -7,7 +7,8 @@ import { Selection, TableData } from '../types/table'
 export const useClipboard = (
   data: TableData,
   selection: Selection | null,
-  updateCell: (rowIndex: number, colIndex: number, value: string) => void
+  updateCell: (rowIndex: number, colIndex: number, value: string) => void,
+  updateMultipleCells?: (positions: { row: number, col: number }[], value: string) => void
 ) => {
   /**
    * 選択範囲のデータをコピー
@@ -38,6 +39,44 @@ export const useClipboard = (
 
     return result
   }, [data, selection])
+
+  /**
+   * 選択範囲のデータをカット
+   * @returns カットしたデータの文字列
+   */
+  const cutSelectedCells = useCallback((): string => {
+    if (!selection) return ''
+
+    // まずデータをコピー
+    const copiedData = copySelectedCells()
+
+    // 選択範囲のセルをクリア
+    const { start, end } = selection
+    const minRow = Math.min(start.row, end.row)
+    const maxRow = Math.max(start.row, end.row)
+    const minCol = Math.min(start.col, end.col)
+    const maxCol = Math.max(start.col, end.col)
+
+    if (updateMultipleCells) {
+      // 複数セルを一度に更新する関数が提供されている場合はそれを使用
+      const positions = []
+      for (let i = minRow; i <= maxRow; i++) {
+        for (let j = minCol; j <= maxCol; j++) {
+          positions.push({ row: i, col: j })
+        }
+      }
+      updateMultipleCells(positions, '')
+    } else {
+      // 個別に更新
+      for (let i = minRow; i <= maxRow; i++) {
+        for (let j = minCol; j <= maxCol; j++) {
+          updateCell(i, j, '')
+        }
+      }
+    }
+
+    return copiedData
+  }, [copySelectedCells, selection, updateCell, updateMultipleCells])
 
   /**
    * クリップボードからデータをペースト
@@ -95,6 +134,7 @@ export const useClipboard = (
 
   return {
     copySelectedCells,
+    cutSelectedCells,
     pasteToSelectedCells,
     pasteData
   }
