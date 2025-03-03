@@ -1,0 +1,83 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 500px;
+  max-width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+}
+
+.closeButton:hover {
+  color: #333;
+}
+
+.content {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.shortcutTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shortcutTable th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid #eee;
+  color: #666;
+  font-weight: 600;
+}
+
+.shortcutTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.keyCell {
+  font-family: monospace;
+  font-weight: bold;
+  white-space: nowrap;
+  color: #333;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 4px 8px !important;
+} 

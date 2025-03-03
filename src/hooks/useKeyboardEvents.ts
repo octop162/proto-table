@@ -11,6 +11,7 @@ type KeyboardEventHandlers = {
   stopEditing: (save?: boolean) => void
   clearSelectedCells: () => void
   isEditing: boolean
+  showShortcutHelp?: () => void  // ショートカットヘルプ表示用
 }
 
 /**
@@ -69,34 +70,34 @@ export const useKeyboardEvents = (
       }
 
       // 通常モードでのキーボード操作
-      switch (e.key) {
-        case 'ArrowUp':
+      switch (e.key.toLowerCase()) {  // 大文字小文字を区別しないように
+        case 'arrowup':
           e.preventDefault()
           currentHandlers.moveSelection('up')
           break
-        case 'ArrowDown':
+        case 'arrowdown':
           e.preventDefault()
           currentHandlers.moveSelection('down')
           break
-        case 'ArrowLeft':
+        case 'arrowleft':
           e.preventDefault()
           currentHandlers.moveSelection('left')
           break
-        case 'ArrowRight':
+        case 'arrowright':
           e.preventDefault()
           currentHandlers.moveSelection('right')
           break
-        case 'Enter':
-        case 'F2':
+        case 'enter':
+        case 'f2':
           e.preventDefault()
           currentHandlers.startEditing()
           break
-        case 'Delete':
-        case 'Backspace':
+        case 'delete':
+        case 'backspace':
           e.preventDefault()
           currentHandlers.clearSelectedCells()
           break
-        case 'Tab':
+        case 'tab':
           e.preventDefault()
           if (e.shiftKey) {
             currentHandlers.moveSelection('left')
@@ -136,6 +137,18 @@ export const useKeyboardEvents = (
           } else {
             // 直接入力の場合
             e.preventDefault() // テスト用にpreventDefaultを呼び出す
+            pendingKeyRef.current = e.key
+            currentHandlers.startEditing()
+          }
+          break
+        case '?':
+          // ヘルプ表示（Shift+?）
+          if (e.shiftKey && currentHandlers.showShortcutHelp) {
+            e.preventDefault()
+            currentHandlers.showShortcutHelp()
+          } else {
+            // 直接入力の場合
+            e.preventDefault()
             pendingKeyRef.current = e.key
             currentHandlers.startEditing()
           }

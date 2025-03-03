@@ -1,4 +1,4 @@
-import { FC, useRef, useEffect, MouseEvent } from 'react'
+import { FC, useRef, useEffect, MouseEvent, useState } from 'react'
 import { Cell } from './Cell'
 import { TableData } from '../types/table'
 import styles from './Table.module.css'
@@ -7,6 +7,7 @@ import { useTableSelection } from '../hooks/useTableSelection'
 import { useClipboard } from '../hooks/useClipboard'
 import { useCellEditing } from '../hooks/useCellEditing'
 import { useKeyboardEvents } from '../hooks/useKeyboardEvents'
+import { ShortcutHelp } from './ShortcutHelp'
 
 type TableProps = {
   initialData: TableData
@@ -14,6 +15,7 @@ type TableProps = {
 
 export const Table: FC<TableProps> = ({ initialData }) => {
   const tableRef = useRef<HTMLDivElement>(null)
+  const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false)
   
   // テーブルデータの管理
   const { 
@@ -55,6 +57,11 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     updateMultipleCells(positions, '')
   }
 
+  // ショートカットヘルプを表示
+  const showShortcutHelp = () => {
+    setIsShortcutHelpOpen(true)
+  }
+
   // 初期状態ではisEditingはfalse
   const isEditingRef = useRef(false)
   
@@ -75,7 +82,8 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     startEditing: () => {},  // 後で上書き
     stopEditing: () => {},  // 後で上書き
     clearSelectedCells,
-    isEditing: isEditingRef.current  // 初期状態
+    isEditing: isEditingRef.current,  // 初期状態
+    showShortcutHelp
   })
   
   // セル編集の管理
@@ -95,7 +103,8 @@ export const Table: FC<TableProps> = ({ initialData }) => {
       stopEditing,
       copySelectedCells,
       cutSelectedCells,
-      pasteToSelectedCells
+      pasteToSelectedCells,
+      showShortcutHelp
     })
   }, [isEditing, startEditing, stopEditing, copySelectedCells, cutSelectedCells, pasteToSelectedCells, updateHandlers])
 
@@ -148,10 +157,10 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     return (
       <div className={styles.toolbar}>
         <div className={styles.toolbarGroup}>
-          <button onClick={() => copySelectedCells()} className={styles.toolbarButton} disabled={!selection} title="コピー">
+          <button onClick={() => copySelectedCells()} className={styles.toolbarButton} disabled={!selection} title="コピー (Ctrl+C)">
             コピー
           </button>
-          <button onClick={() => cutSelectedCells()} className={styles.toolbarButton} disabled={!selection} title="カット">
+          <button onClick={() => cutSelectedCells()} className={styles.toolbarButton} disabled={!selection} title="カット (Ctrl+X)">
             カット
           </button>
           <button 
@@ -162,7 +171,7 @@ export const Table: FC<TableProps> = ({ initialData }) => {
             }} 
             className={styles.toolbarButton} 
             disabled={!currentCell}
-            title="ペースト"
+            title="ペースト (Ctrl+V)"
           >
             ペースト
           </button>
@@ -170,7 +179,7 @@ export const Table: FC<TableProps> = ({ initialData }) => {
             onClick={clearSelectedCells} 
             className={styles.toolbarButton} 
             disabled={!selection}
-            title="クリア"
+            title="クリア (Delete)"
           >
             クリア
           </button>
@@ -199,6 +208,13 @@ export const Table: FC<TableProps> = ({ initialData }) => {
           >
             幅を更新
           </button>
+          <button 
+            onClick={showShortcutHelp} 
+            className={styles.toolbarButton} 
+            title="ショートカット (Shift+?)"
+          >
+            ショートカット
+          </button>
         </div>
       </div>
     )
@@ -220,6 +236,11 @@ export const Table: FC<TableProps> = ({ initialData }) => {
           </tbody>
         </table>
       </div>
+
+      <ShortcutHelp 
+        isOpen={isShortcutHelpOpen} 
+        onClose={() => setIsShortcutHelpOpen(false)} 
+      />
     </div>
   )
 } 
