@@ -28,7 +28,11 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     addRow, 
     addColumn, 
     removeRow, 
-    removeColumn 
+    removeColumn,
+    undoAction,
+    redoAction,
+    canUndo,
+    canRedo
   } = useTableData(initialData)
   
   // 初期表示時にセル幅を自動調整
@@ -88,14 +92,15 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     copySelectedCells, 
     cutSelectedCells,
     pasteToSelectedCells
-  } = useClipboard(
-    data, 
-    selection, 
+  } = useClipboard({
+    tableData: data, 
+    selectedCells: selection, 
+    currentCell,
     updateCell, 
     updateMultipleCells,
     addRow,
     addColumn
-  )
+  })
 
   // 行を安全に削除（選択状態を考慮）
   const safeRemoveRow = () => {
@@ -146,7 +151,9 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     stopEditing: () => {},  // 後で上書き
     clearSelectedCells,
     isEditing: isEditingRef.current,  // 初期状態
-    showShortcutHelp
+    showShortcutHelp,
+    undo: undoAction,
+    redo: redoAction
   })
   
   // セル編集の管理
@@ -167,9 +174,11 @@ export const Table: FC<TableProps> = ({ initialData }) => {
       copySelectedCells,
       cutSelectedCells,
       pasteToSelectedCells,
-      showShortcutHelp
+      showShortcutHelp,
+      undo: undoAction,
+      redo: redoAction
     })
-  }, [isEditing, startEditing, stopEditing, copySelectedCells, cutSelectedCells, pasteToSelectedCells, updateHandlers])
+  }, [isEditing, startEditing, stopEditing, copySelectedCells, cutSelectedCells, pasteToSelectedCells, updateHandlers, undoAction, redoAction])
 
   // マウスダウンイベントハンドラー（Shiftキーの状態を取得）
   const handleCellMouseDown = (rowIndex: number, colIndex: number, e: MouseEvent) => {
@@ -259,6 +268,25 @@ export const Table: FC<TableProps> = ({ initialData }) => {
           </button>
           <button onClick={safeRemoveColumn} className={styles.toolbarButton} disabled={data[0].length <= 1} title="列を削除">
             列を削除
+          </button>
+        </div>
+
+        <div className={styles.toolbarGroup}>
+          <button 
+            onClick={undoAction} 
+            className={styles.toolbarButton} 
+            disabled={!canUndo}
+            title="元に戻す (Ctrl+Z)"
+          >
+            ↩ 元に戻す
+          </button>
+          <button 
+            onClick={redoAction} 
+            className={styles.toolbarButton} 
+            disabled={!canRedo}
+            title="やり直し (Ctrl+Y)"
+          >
+            ↪ やり直し
           </button>
         </div>
 

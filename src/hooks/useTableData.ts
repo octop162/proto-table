@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { TableData, CellData, Position } from '../types/table'
+import { useState, useCallback } from 'react'
+import { TableData, CellData, Position, HistoryActionType } from '../types/table'
 import { calculateColumnWidths } from '../utils/cellWidthCalculator'
+import { useTableHistory } from './useTableHistory'
 
 /**
  * テーブルデータを管理するカスタムフック
@@ -9,6 +10,25 @@ import { calculateColumnWidths } from '../utils/cellWidthCalculator'
  */
 export const useTableData = (initialData: TableData) => {
   const [data, setData] = useState<TableData>(initialData)
+  
+  // 履歴管理フックを初期化
+  const { 
+    addHistory, 
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo 
+  } = useTableHistory(initialData)
+
+  /**
+   * データを更新し、履歴に追加する
+   * @param newData 新しいテーブルデータ
+   * @param actionType アクションの種類
+   */
+  const updateDataWithHistory = useCallback((newData: TableData, actionType: HistoryActionType) => {
+    setData(newData)
+    addHistory(actionType, newData)
+  }, [addHistory])
 
   /**
    * セルの値を更新
@@ -16,21 +36,21 @@ export const useTableData = (initialData: TableData) => {
    * @param colIndex 列インデックス
    * @param value 新しい値
    */
-  const updateCell = (rowIndex: number, colIndex: number, value: CellData['value']) => {
+  const updateCell = useCallback((rowIndex: number, colIndex: number, value: CellData['value']) => {
     const newData = [...data]
     newData[rowIndex][colIndex] = {
       ...newData[rowIndex][colIndex],
       value
     }
-    setData(newData)
-  }
+    updateDataWithHistory(newData, HistoryActionType.CELL_UPDATE)
+  }, [data, updateDataWithHistory])
 
   /**
    * 複数のセルの値を更新
    * @param positions 更新するセルの位置の配列
    * @param value 新しい値
    */
-  const updateMultipleCells = (positions: Position[], value: CellData['value']) => {
+  const updateMultipleCells = useCallback((positions: Position[], value: CellData['value']) => {
     const newData = [...data]
     positions.forEach(({ row, col }) => {
       newData[row][col] = {
@@ -38,15 +58,15 @@ export const useTableData = (initialData: TableData) => {
         value
       }
     })
-    setData(newData)
-  }
+    updateDataWithHistory(newData, HistoryActionType.MULTIPLE_CELLS_UPDATE)
+  }, [data, updateDataWithHistory])
 
   /**
    * セルの幅を設定
    * @param colIndex 列インデックス
    * @param width 幅（px）
    */
-  const setCellWidth = (colIndex: number, width: number) => {
+  const setCellWidth = useCallback((colIndex: number, width: number) => {
     const newData = [...data]
     for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
       newData[rowIndex][colIndex] = {
@@ -54,13 +74,13 @@ export const useTableData = (initialData: TableData) => {
         width
       }
     }
-    setData(newData)
-  }
+    setData(newData) // 幅の変更は履歴に追加しない
+  }, [data])
 
   /**
    * 全てのセルの幅を内容に合わせて自動調整
    */
-  const updateAllCellWidths = () => {
+  const updateAllCellWidths = useCallback(() => {
     const columnWidths = calculateColumnWidths(data)
     const newData = [...data]
     
@@ -73,13 +93,13 @@ export const useTableData = (initialData: TableData) => {
       }
     }
     
-    setData(newData)
-  }
+    setData(newData) // 幅の変更は履歴に追加しない
+  }, [data])
 
   /**
    * 行を追加
    */
-  const addRow = () => {
+  const addRow = useCallback(() => {
     // 最後の行のセル幅を取得
     const lastRowWidths = data.length > 0 
       ? data[0].map(cell => cell.width || 80)
@@ -92,13 +112,13 @@ export const useTableData = (initialData: TableData) => {
     }))
     
     const newData = [...data, newRow]
-    setData(newData)
-  }
+    updateDataWithHistory(newData, HistoryActionType.ADD_ROW)
+  }, [data, updateDataWithHistory])
 
   /**
    * 列を追加
    */
-  const addColumn = () => {
+  const addColumn = useCallback(() => {
     const newData = data.map(row => [
       ...row,
       {
@@ -108,24 +128,24 @@ export const useTableData = (initialData: TableData) => {
       }
     ])
     
-    setData(newData)
-  }
+    updateDataWithHistory(newData, HistoryActionType.ADD_COLUMN)
+  }, [data, updateDataWithHistory])
 
   /**
    * 行を削除
    */
-  const removeRow = () => {
+  const removeRow = useCallback(() => {
     if (data.length <= 1) return
     
     const newData = [...data]
     newData.pop()
-    setData(newData)
-  }
+    updateDataWithHistory(newData, HistoryActionType.REMOVE_ROW)
+  }, [data, updateDataWithHistory])
 
   /**
    * 列を削除
    */
-  const removeColumn = () => {
+  const removeColumn = useCallback(() => {
     if (data[0].length <= 1) return
     
     const newData = data.map(row => {
@@ -134,8 +154,8 @@ export const useTableData = (initialData: TableData) => {
       return newRow
     })
     
-    setData(newData)
-  }
+    updateDataWithHistory(newData, HistoryActionType.REMOVE_COLUMN)
+  }, [data, updateDataWithHistory])
 
   /**
    * 文字列データをテーブルにペースト
@@ -143,7 +163,7 @@ export const useTableData = (initialData: TableData) => {
    * @param startRow 開始行
    * @param startCol 開始列
    */
-  const pasteData = (text: string, startRow: number, startCol: number) => {
+  const pasteData = useCallback((text: string, startRow: number, startCol: number) => {
     const rows = text.split('\n').filter(row => row.trim() !== '')
     const newData = [...data]
 
@@ -163,8 +183,8 @@ export const useTableData = (initialData: TableData) => {
       })
     })
 
-    setData(newData)
-  }
+    updateDataWithHistory(newData, HistoryActionType.PASTE)
+  }, [data, updateDataWithHistory])
 
   /**
    * 選択範囲のデータをコピー
@@ -172,7 +192,7 @@ export const useTableData = (initialData: TableData) => {
    * @param endPos 終了位置
    * @returns コピーしたデータの文字列
    */
-  const copyData = (startPos: Position, endPos: Position): string => {
+  const copyData = useCallback((startPos: Position, endPos: Position): string => {
     const minRow = Math.min(startPos.row, endPos.row)
     const maxRow = Math.max(startPos.row, endPos.row)
     const minCol = Math.min(startPos.col, endPos.col)
@@ -188,7 +208,27 @@ export const useTableData = (initialData: TableData) => {
     }
 
     return result
-  }
+  }, [data])
+
+  /**
+   * 元に戻す
+   */
+  const undoAction = useCallback(() => {
+    const prevData = undo()
+    if (prevData) {
+      setData(prevData)
+    }
+  }, [undo])
+
+  /**
+   * やり直す
+   */
+  const redoAction = useCallback(() => {
+    const nextData = redo()
+    if (nextData) {
+      setData(nextData)
+    }
+  }, [redo])
 
   return {
     data,
@@ -201,6 +241,10 @@ export const useTableData = (initialData: TableData) => {
     removeRow,
     removeColumn,
     pasteData,
-    copyData
+    copyData,
+    undoAction,
+    redoAction,
+    canUndo,
+    canRedo
   }
 } 

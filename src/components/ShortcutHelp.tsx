@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import React from 'react'
 import styles from './ShortcutHelp.module.css'
 
 type ShortcutHelpProps = {
@@ -6,28 +6,14 @@ type ShortcutHelpProps = {
   onClose: () => void
 }
 
-export const ShortcutHelp: FC<ShortcutHelpProps> = ({ isOpen, onClose }) => {
+export const ShortcutHelp: React.FC<ShortcutHelpProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null
-
-  const shortcuts = [
-    { key: 'Ctrl+C / ⌘+C', description: 'コピー' },
-    { key: 'Ctrl+X / ⌘+X', description: 'カット' },
-    { key: 'Ctrl+V / ⌘+V', description: 'ペースト' },
-    { key: 'Delete / Backspace', description: 'セルをクリア' },
-    { key: 'F2 / Enter', description: '編集モード開始' },
-    { key: 'Escape', description: '編集キャンセル' },
-    { key: 'Enter', description: '編集確定（編集モード中）' },
-    { key: '↑↓←→', description: 'セル移動' },
-    { key: 'Shift+↑↓←→', description: '選択範囲を拡大' },
-    { key: 'Tab / Shift+Tab', description: '右/左のセルに移動' },
-    { key: 'Shift+?', description: 'このヘルプを表示' }
-  ]
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2>キーボードショートカット</h2>
+          <h2>ショートカットキー一覧</h2>
           <button className={styles.closeButton} onClick={onClose}>×</button>
         </div>
         <div className={styles.content}>
@@ -39,12 +25,58 @@ export const ShortcutHelp: FC<ShortcutHelpProps> = ({ isOpen, onClose }) => {
               </tr>
             </thead>
             <tbody>
-              {shortcuts.map((shortcut, index) => (
-                <tr key={index}>
-                  <td className={styles.keyCell}>{shortcut.key}</td>
-                  <td>{shortcut.description}</td>
-                </tr>
-              ))}
+              <tr>
+                <td>Ctrl+C / ⌘+C</td>
+                <td>コピー</td>
+              </tr>
+              <tr>
+                <td>Ctrl+X / ⌘+X</td>
+                <td>切り取り</td>
+              </tr>
+              <tr>
+                <td>Ctrl+V / ⌘+V</td>
+                <td>貼り付け</td>
+              </tr>
+              <tr>
+                <td>Ctrl+Z / ⌘+Z</td>
+                <td>元に戻す</td>
+              </tr>
+              <tr>
+                <td>Ctrl+Y / ⌘+Y</td>
+                <td>やり直し</td>
+              </tr>
+              <tr>
+                <td>Delete / Backspace</td>
+                <td>セルクリア</td>
+              </tr>
+              <tr>
+                <td>F2 / Enter</td>
+                <td>編集開始</td>
+              </tr>
+              <tr>
+                <td>Escape</td>
+                <td>編集キャンセル</td>
+              </tr>
+              <tr>
+                <td>Enter (編集中)</td>
+                <td>編集確定</td>
+              </tr>
+              <tr>
+                <td>矢印キー</td>
+                <td>セル移動</td>
+              </tr>
+              <tr>
+                <td>Shift + 矢印キー</td>
+                <td>選択範囲拡大</td>
+              </tr>
+              <tr>
+                <td>Tab / Shift+Tab</td>
+                <td>右/左に移動</td>
+              </tr>
+              <tr>
+                <td>Shift+?</td>
+                <td>このヘルプを表示</td>
+              </tr>
             </tbody>
           </table>
         </div>
