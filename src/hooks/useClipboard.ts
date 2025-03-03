@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { TableData, Selection, Position, HistoryActionType } from '../types/table'
+import { TableData, Selection, Position } from '../types/table'
 
 type UseClipboardProps = {
   tableData: TableData
@@ -89,7 +89,10 @@ export const useClipboard = ({
 
     try {
       const text = await navigator.clipboard.readText()
-      const rows = text.split('\n').filter(row => row.trim() !== '')
+      // 末尾の改行を除去しつつ、空の行も保持する
+      const rows = text.endsWith('\n') 
+        ? text.slice(0, -1).split('\n') 
+        : text.split('\n');
       
       const startRow = currentCell.row
       const startCol = currentCell.col
