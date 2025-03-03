@@ -46,7 +46,8 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     getSelectedCellPositions,
     handleMouseDown,
     handleMouseMove,
-    handleMouseUp
+    handleMouseUp,
+    clearSelection
   } = useTableSelection(data)
   
   // 選択されたセルをクリア
@@ -70,7 +71,52 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     copySelectedCells, 
     cutSelectedCells,
     pasteToSelectedCells
-  } = useClipboard(data, selection, updateCell, updateMultipleCells)
+  } = useClipboard(
+    data, 
+    selection, 
+    updateCell, 
+    updateMultipleCells,
+    addRow,
+    addColumn
+  )
+
+  // 行を安全に削除（選択状態を考慮）
+  const safeRemoveRow = () => {
+    if (data.length <= 1) return
+
+    // 最後の行が選択されているかチェック
+    const lastRowIndex = data.length - 1
+    const isLastRowSelected = selection && 
+      (Math.min(selection.start.row, selection.end.row) <= lastRowIndex && 
+       Math.max(selection.start.row, selection.end.row) >= lastRowIndex)
+
+    // 最後の行が選択されている場合は選択を解除
+    if (isLastRowSelected) {
+      clearSelection()
+    }
+
+    // 行を削除
+    removeRow()
+  }
+
+  // 列を安全に削除（選択状態を考慮）
+  const safeRemoveColumn = () => {
+    if (data[0].length <= 1) return
+
+    // 最後の列が選択されているかチェック
+    const lastColIndex = data[0].length - 1
+    const isLastColSelected = selection && 
+      (Math.min(selection.start.col, selection.end.col) <= lastColIndex && 
+       Math.max(selection.start.col, selection.end.col) >= lastColIndex)
+
+    // 最後の列が選択されている場合は選択を解除
+    if (isLastColSelected) {
+      clearSelection()
+    }
+
+    // 列を削除
+    removeColumn()
+  }
   
   // キーボードイベントの管理（初期設定）
   const { getPendingKey, updateHandlers } = useKeyboardEvents(data, {
@@ -189,13 +235,13 @@ export const Table: FC<TableProps> = ({ initialData }) => {
           <button onClick={() => addRow()} className={styles.toolbarButton} title="行を追加">
             行を追加
           </button>
-          <button onClick={() => removeRow()} className={styles.toolbarButton} disabled={data.length <= 1} title="行を削除">
+          <button onClick={safeRemoveRow} className={styles.toolbarButton} disabled={data.length <= 1} title="行を削除">
             行を削除
           </button>
           <button onClick={() => addColumn()} className={styles.toolbarButton} title="列を追加">
             列を追加
           </button>
-          <button onClick={() => removeColumn()} className={styles.toolbarButton} disabled={data[0].length <= 1} title="列を削除">
+          <button onClick={safeRemoveColumn} className={styles.toolbarButton} disabled={data[0].length <= 1} title="列を削除">
             列を削除
           </button>
         </div>

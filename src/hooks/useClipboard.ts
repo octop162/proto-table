@@ -8,7 +8,9 @@ export const useClipboard = (
   data: TableData,
   selection: Selection | null,
   updateCell: (rowIndex: number, colIndex: number, value: string) => void,
-  updateMultipleCells?: (positions: { row: number, col: number }[], value: string) => void
+  updateMultipleCells?: (positions: { row: number, col: number }[], value: string) => void,
+  addRow?: () => void,
+  addColumn?: () => void
 ) => {
   /**
    * 選択範囲のデータをコピー
@@ -89,13 +91,34 @@ export const useClipboard = (
       const rows = text.split('\n').filter(row => row.trim() !== '')
       const { start } = selection
 
+      // ペーストするデータのサイズを計算
+      const pasteHeight = rows.length
+      const pasteWidth = Math.max(...rows.map(row => row.split('\t').length))
+
+      // 必要な行数を確保
+      if (addRow && start.row + pasteHeight > data.length) {
+        const rowsToAdd = start.row + pasteHeight - data.length
+        for (let i = 0; i < rowsToAdd; i++) {
+          addRow()
+        }
+      }
+
+      // 必要な列数を確保
+      if (addColumn && start.col + pasteWidth > data[0].length) {
+        const colsToAdd = start.col + pasteWidth - data[0].length
+        for (let i = 0; i < colsToAdd; i++) {
+          addColumn()
+        }
+      }
+
+      // データをペースト
       rows.forEach((row, rowIndex) => {
         const cells = row.split('\t')
         cells.forEach((cell, colIndex) => {
           const targetRow = start.row + rowIndex
           const targetCol = start.col + colIndex
 
-          // テーブルの範囲内かチェック
+          // テーブルの範囲内かチェック（行や列が追加されている場合は必ず範囲内になるはず）
           if (targetRow < data.length && targetCol < data[0].length) {
             updateCell(targetRow, targetCol, cell)
           }
@@ -104,7 +127,7 @@ export const useClipboard = (
     } catch (err) {
       console.error('クリップボードからの読み取りに失敗しました:', err)
     }
-  }, [data, selection, updateCell])
+  }, [data, selection, updateCell, addRow, addColumn])
 
   /**
    * 文字列データをテーブルにペースト
@@ -116,6 +139,27 @@ export const useClipboard = (
     (text: string, startRow: number, startCol: number) => {
       const rows = text.split('\n').filter(row => row.trim() !== '')
 
+      // ペーストするデータのサイズを計算
+      const pasteHeight = rows.length
+      const pasteWidth = Math.max(...rows.map(row => row.split('\t').length))
+
+      // 必要な行数を確保
+      if (addRow && startRow + pasteHeight > data.length) {
+        const rowsToAdd = startRow + pasteHeight - data.length
+        for (let i = 0; i < rowsToAdd; i++) {
+          addRow()
+        }
+      }
+
+      // 必要な列数を確保
+      if (addColumn && startCol + pasteWidth > data[0].length) {
+        const colsToAdd = startCol + pasteWidth - data[0].length
+        for (let i = 0; i < colsToAdd; i++) {
+          addColumn()
+        }
+      }
+
+      // データをペースト
       rows.forEach((row, rowIndex) => {
         const cells = row.split('\t')
         cells.forEach((cell, colIndex) => {
@@ -129,7 +173,7 @@ export const useClipboard = (
         })
       })
     },
-    [data, updateCell]
+    [data, updateCell, addRow, addColumn]
   )
 
   return {
