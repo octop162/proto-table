@@ -59,7 +59,7 @@ export const ShortcutHelp: React.FC<ShortcutHelpProps> = ({ isOpen, onClose }) =
               </tr>
               <tr>
                 <td>Escape</td>
-                <td>編集キャンセル</td>
+                <td>編集キャンセル / 選択解除</td>
               </tr>
               <tr>
                 <td>Enter (編集中)</td>

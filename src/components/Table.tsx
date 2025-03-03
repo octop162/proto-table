@@ -155,7 +155,8 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     showShortcutHelp,
     undo: undoAction,
     redo: redoAction,
-    selectAllCells
+    selectAllCells,
+    clearSelection
   })
   
   // セル編集の管理
@@ -179,9 +180,10 @@ export const Table: FC<TableProps> = ({ initialData }) => {
       showShortcutHelp,
       undo: undoAction,
       redo: redoAction,
-      selectAllCells
+      selectAllCells,
+      clearSelection
     })
-  }, [isEditing, startEditing, stopEditing, copySelectedCells, cutSelectedCells, pasteToSelectedCells, updateHandlers, undoAction, redoAction, selectAllCells])
+  }, [isEditing, startEditing, stopEditing, copySelectedCells, cutSelectedCells, pasteToSelectedCells, updateHandlers, undoAction, redoAction, selectAllCells, clearSelection])
 
   // マウスダウンイベントハンドラー（Shiftキーの状態を取得）
   const handleCellMouseDown = (rowIndex: number, colIndex: number, e: MouseEvent) => {
@@ -263,6 +265,14 @@ export const Table: FC<TableProps> = ({ initialData }) => {
             title="すべて選択 (Ctrl+A)"
           >
             すべて選択
+          </button>
+          <button 
+            onClick={clearSelection} 
+            className={styles.toolbarButton} 
+            disabled={!selection}
+            title="選択解除 (Esc)"
+          >
+            選択解除
           </button>
         </div>
 

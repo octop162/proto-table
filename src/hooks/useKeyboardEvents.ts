@@ -15,6 +15,7 @@ type KeyboardEventHandlers = {
   undo?: () => void  // 元に戻す
   redo?: () => void  // やり直し
   selectAllCells?: () => void  // すべてのセルを選択
+  clearSelection?: () => void  // 選択を解除
 }
 
 /**
@@ -98,6 +99,15 @@ export const useKeyboardEvents = (
       }
 
       // 以下、編集モードでない場合の処理
+
+      // Escキーで選択解除
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        if (currentHandlers.clearSelection) {
+          currentHandlers.clearSelection()
+        }
+        return
+      }
 
       // Ctrl+A または Cmd+A ですべて選択
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
