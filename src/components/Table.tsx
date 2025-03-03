@@ -1,4 +1,4 @@
-import { FC, useRef } from 'react'
+import { FC, useRef, useEffect } from 'react'
 import { Cell } from './Cell'
 import { TableData } from '../types/table'
 import styles from './Table.module.css'
@@ -20,11 +20,17 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     data, 
     updateCell, 
     updateMultipleCells,
+    updateAllCellWidths,
     addRow, 
     addColumn, 
     removeRow, 
     removeColumn 
   } = useTableData(initialData)
+  
+  // 初期表示時にセル幅を自動調整
+  useEffect(() => {
+    updateAllCellWidths()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   
   // 選択状態の管理
   const { 
@@ -96,6 +102,7 @@ export const Table: FC<TableProps> = ({ initialData }) => {
         value={cell.value}
         isEditing={editing}
         isSelected={selected}
+        width={cell.width}
         onEdit={(value) => updateCell(rowIndex, colIndex, value)}
         onSelect={() => selectCell(rowIndex, colIndex)}
         onCompositionStart={handleCompositionStart}
@@ -164,6 +171,16 @@ export const Table: FC<TableProps> = ({ initialData }) => {
           </button>
           <button onClick={() => removeColumn()} className={styles.toolbarButton} disabled={data[0].length <= 1} title="列を削除">
             列を削除
+          </button>
+        </div>
+
+        <div className={styles.toolbarGroup}>
+          <button 
+            onClick={() => updateAllCellWidths()} 
+            className={styles.toolbarButton} 
+            title="幅を更新"
+          >
+            幅を更新
           </button>
         </div>
       </div>

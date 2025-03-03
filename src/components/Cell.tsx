@@ -1,10 +1,11 @@
-import { FC, KeyboardEvent, useState, useEffect, useRef } from 'react'
+import { FC, KeyboardEvent, useState, useEffect, useRef, CSSProperties } from 'react'
 import styles from './Cell.module.css'
 
 type CellProps = {
   value: string
   isEditing: boolean
   isSelected: boolean
+  width?: number
   onEdit: (value: string) => void
   onSelect: () => void
   onKeyDown?: (e: KeyboardEvent<HTMLInputElement | HTMLDivElement>) => void
@@ -21,6 +22,7 @@ export const Cell: FC<CellProps> = ({
   value,
   isEditing,
   isSelected,
+  width,
   onEdit,
   onSelect,
   onKeyDown,
@@ -38,6 +40,13 @@ export const Cell: FC<CellProps> = ({
   const [prevValue, setPrevValue] = useState(value)
   const [hasUserEdited, setHasUserEdited] = useState(false)
   const isComposingRef = useRef(false)
+
+  // セルのスタイルを計算
+  const cellStyle: CSSProperties = {
+    width: width ? `${width}px` : undefined,
+    minWidth: width ? `${width}px` : '80px',
+    maxWidth: width ? `${width}px` : undefined,
+  }
 
   // 編集モードが変わったとき、または値が変わったときに入力値を更新
   useEffect(() => {
@@ -163,6 +172,7 @@ export const Cell: FC<CellProps> = ({
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseUp={handleMouseUp}
+      style={cellStyle}
     >
       {isEditing ? (
         <input

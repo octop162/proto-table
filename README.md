@@ -1,54 +1,107 @@
-# React + TypeScript + Vite
+# Excel-like Table Editor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+シンプルなExcelライクな表エディタです。Reactで実装されており、基本的な表編集機能を提供します。
 
-Currently, two official plugins are available:
+## 主な機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 基本的なUI
+- グリッド表示（セル、行、列）
+  - デフォルトで5x5のグリッド
+  - 表の幅は列の合計幅に自動調整
+- スクロール可能な領域
+- ツールバーによる操作
 
-## Expanding the ESLint configuration
+### セル操作
+- セルの選択（単一・複数）
+  - クリックによる選択
+  - ドラッグアンドドロップによる範囲選択
+  - Shift+クリックによる範囲選択
+  - Shift+矢印キーによる選択範囲の拡大/縮小
+- セルの編集
+  - ダブルクリックまたはEnterキーで編集モード開始
+  - 日本語入力（IME）対応
+  - Escキーでキャンセル、Enterキーで確定
+- セル幅の管理
+  - セルごとに個別の幅を設定可能
+  - 「幅を更新」ボタンで内容に合わせて自動調整
+  - 全角文字と改行を考慮した幅の計算
+  - 初期表示時に自動的に幅を調整
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### キーボード操作
+- 矢印キーによるナビゲーション
+- Tabキー（次のセル）、Shift+Tabキー（前のセル）
+- Enterキー（編集開始/確定）
+- Escキー（編集キャンセル）
+- Delete/Backspaceキー（選択セルのクリア）
+- Ctrl+C（コピー）、Ctrl+V（ペースト）
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### データ操作
+- コピー＆ペースト
+- 行の追加/削除
+- 列の追加/削除
+- 選択セルのクリア
+- Markdownへの変換
+
+## 技術的な実装
+
+### コンポーネント構成
+- `Table`: メインのテーブルコンポーネント
+- `Cell`: 個々のセルを表示・編集するコンポーネント
+
+### カスタムフック
+- `useTableData`: テーブルデータの管理
+- `useTableSelection`: 選択状態の管理
+- `useCellEditing`: セル編集の管理
+- `useKeyboardEvents`: キーボードイベントの管理
+- `useClipboard`: クリップボード操作の管理
+
+### データ構造
+- 2次元配列によるセルデータの管理
+- 各セルは値、編集状態、幅を保持
+
+### ユーティリティ
+- `cellWidthCalculator`: セル幅を計算するユーティリティ関数
+  - 全角文字は半角の2倍の幅として計算
+  - 改行を考慮して各行の最大幅を計算
+
+## 使用方法
+
+```jsx
+import { Table } from './components/Table';
+
+// 初期データの定義（5x5のグリッド）
+const initialData = Array(5).fill(null).map(() =>
+  Array(5).fill(null).map(() => ({
+    value: '',
+    isEditing: false,
+    width: 80, // デフォルト幅
+  }))
+);
+
+function App() {
+  return (
+    <div className="App">
+      <Table initialData={initialData} />
+    </div>
+  );
+}
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Markdownへの変換
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+テーブルデータをMarkdown形式に変換する機能を提供しています。変換されたMarkdownは以下の形式になります：
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```markdown
+| セル1 | セル2 |
+|-------|-------|
+| セル3 | セル4 |
 ```
+
+## 今後の拡張予定
+
+- 変更履歴の管理（Undo/Redo）
+- ダークモード対応
+- セルのスタイリング（フォント、色、境界線など）
+- 列幅・行高の調整
+- データの保存と読み込み
+- セル内の書式設定（太字、斜体など） 

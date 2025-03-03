@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { TableData, CellData, Position } from '../types/table'
+import { calculateColumnWidths } from '../utils/cellWidthCalculator'
 
 /**
  * テーブルデータを管理するカスタムフック
@@ -41,12 +42,53 @@ export const useTableData = (initialData: TableData) => {
   }
 
   /**
+   * セルの幅を設定
+   * @param colIndex 列インデックス
+   * @param width 幅（px）
+   */
+  const setCellWidth = (colIndex: number, width: number) => {
+    const newData = [...data]
+    for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
+      newData[rowIndex][colIndex] = {
+        ...newData[rowIndex][colIndex],
+        width
+      }
+    }
+    setData(newData)
+  }
+
+  /**
+   * 全てのセルの幅を内容に合わせて自動調整
+   */
+  const updateAllCellWidths = () => {
+    const columnWidths = calculateColumnWidths(data)
+    const newData = [...data]
+    
+    for (let colIndex = 0; colIndex < columnWidths.length; colIndex++) {
+      for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
+        newData[rowIndex][colIndex] = {
+          ...newData[rowIndex][colIndex],
+          width: columnWidths[colIndex]
+        }
+      }
+    }
+    
+    setData(newData)
+  }
+
+  /**
    * 行を追加
    */
   const addRow = () => {
-    const newRow = Array(data[0].length).fill(null).map(() => ({
+    // 最後の行のセル幅を取得
+    const lastRowWidths = data.length > 0 
+      ? data[0].map(cell => cell.width || 80)
+      : Array(data[0].length).fill(80)
+    
+    const newRow = Array(data[0].length).fill(null).map((_, index) => ({
       value: '',
-      isEditing: false
+      isEditing: false,
+      width: lastRowWidths[index] // 前の行と同じ幅を設定
     }))
     
     const newData = [...data, newRow]
@@ -61,7 +103,8 @@ export const useTableData = (initialData: TableData) => {
       ...row,
       {
         value: '',
-        isEditing: false
+        isEditing: false,
+        width: 80 // デフォルト幅
       }
     ])
     
@@ -151,6 +194,8 @@ export const useTableData = (initialData: TableData) => {
     data,
     updateCell,
     updateMultipleCells,
+    setCellWidth,
+    updateAllCellWidths,
     addRow,
     addColumn,
     removeRow,

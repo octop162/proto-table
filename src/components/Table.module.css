@@ -1,7 +1,7 @@
 .tableWrapper {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: fit-content;
   height: 100%;
 }
 
@@ -48,7 +48,7 @@
 
 .table {
   border-collapse: collapse;
-  width: 100%;
+  width: auto;
   table-layout: fixed;
   background-color: white;
 }
