@@ -7,7 +7,8 @@ import { Position, TableData } from '../types/table'
 export const useCellEditing = (
   data: TableData,
   currentCell: Position | null,
-  updateCell: (rowIndex: number, colIndex: number, value: string) => void
+  updateCell: (rowIndex: number, colIndex: number, value: string) => void,
+  getPendingKey?: () => string | null
 ) => {
   const [editValue, setEditValue] = useState('')
   const [isEditing, setIsEditing] = useState(false)
@@ -54,13 +55,23 @@ export const useCellEditing = (
     const { row, col } = currentCell
     // 値を文字列に変換して設定
     const cellValue = data[row][col].value;
-    const stringValue = cellValue !== undefined ? String(cellValue) : '';
+    let stringValue = cellValue !== undefined ? String(cellValue) : '';
+    
+    // 保留中のキー入力があれば、それを初期値として設定
+    const pendingKey = getPendingKey?.();
+    if (pendingKey) {
+      stringValue = pendingKey;
+      hasEditedRef.current = true;  // 編集フラグを設定
+    } else {
+      // 保留中のキーがない場合は、セルの現在の値を使用
+      initialEditValueRef.current = stringValue;
+      hasEditedRef.current = false;  // 編集フラグをリセット
+    }
+    
     setEditValue(stringValue);
     editValueRef.current = stringValue;  // refも更新
-    initialEditValueRef.current = stringValue;
-    hasEditedRef.current = false;  // 編集フラグをリセット
-    setIsEditing(true)
-  }, [currentCell, data])
+    setIsEditing(true);
+  }, [currentCell, data, getPendingKey])
 
   /**
    * 編集を終了

@@ -21,6 +21,13 @@ export const useKeyboardEvents = (
   handlers: KeyboardEventHandlers
 ) => {
   const isComposingRef = useRef(false)
+  const pendingKeyRef = useRef<string | null>(null)
+  const isEditingRef = useRef(handlers.isEditing)
+
+  // isEditingの値が変わったときにrefを更新
+  useEffect(() => {
+    isEditingRef.current = handlers.isEditing
+  }, [handlers.isEditing])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -33,7 +40,7 @@ export const useKeyboardEvents = (
       }
 
       // 編集モード中の特別な処理
-      if (handlers.isEditing) {
+      if (isEditingRef.current) {
         if (e.key === 'Escape') {
           e.preventDefault()
           handlers.stopEditing(false)
@@ -95,18 +102,31 @@ export const useKeyboardEvents = (
           if (e.ctrlKey || e.metaKey) {
             e.preventDefault()
             handlers.copySelectedCells()
+          } else {
+            // 直接入力の場合
+            e.preventDefault() // テスト用にpreventDefaultを呼び出す
+            pendingKeyRef.current = e.key
+            handlers.startEditing()
           }
           break
         case 'v':
           if (e.ctrlKey || e.metaKey) {
             e.preventDefault()
             handlers.pasteToSelectedCells()
+          } else {
+            // 直接入力の場合
+            e.preventDefault() // テスト用にpreventDefaultを呼び出す
+            pendingKeyRef.current = e.key
+            handlers.startEditing()
           }
           break
         // 文字入力を開始した場合（通常の文字キー）
         default:
           if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            // テスト用にpreventDefaultを呼び出す
             e.preventDefault()
+            // 入力された文字を保存
+            pendingKeyRef.current = e.key
             handlers.startEditing()
           }
           break
@@ -139,4 +159,12 @@ export const useKeyboardEvents = (
       document.removeEventListener('compositionend', handleCompositionEnd)
     }
   }, [data, handlers])
+
+  return {
+    getPendingKey: () => {
+      const key = pendingKeyRef.current
+      pendingKeyRef.current = null
+      return key
+    }
+  }
 } 

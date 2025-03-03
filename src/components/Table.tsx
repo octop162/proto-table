@@ -47,6 +47,14 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     handleMouseUp
   } = useTableSelection(data)
   
+  // 選択されたセルをクリア
+  const clearSelectedCells = () => {
+    if (!selection) return
+    
+    const positions = getSelectedCellPositions()
+    updateMultipleCells(positions, '')
+  }
+
   // セル編集の管理
   const { 
     isEditing,
@@ -56,39 +64,23 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     handleCompositionEnd
   } = useCellEditing(data, currentCell, updateCell)
   
+  // キーボードイベントの管理
+  const { getPendingKey } = useKeyboardEvents(data, {
+    moveSelection,
+    setShiftKey,
+    copySelectedCells: () => {},  // 後で上書き
+    pasteToSelectedCells: () => {},  // 後で上書き
+    startEditing,
+    stopEditing,
+    clearSelectedCells,
+    isEditing
+  })
+  
   // クリップボード操作の管理
   const { 
     copySelectedCells, 
     pasteToSelectedCells
   } = useClipboard(data, selection, updateCell)
-
-  // 選択されたセルをクリア
-  const clearSelectedCells = () => {
-    if (!selection) return
-    
-    const positions = getSelectedCellPositions()
-    updateMultipleCells(positions, '')
-  }
-  
-  // キーボードイベントの管理
-  useKeyboardEvents(data, {
-    moveSelection,
-    setShiftKey,
-    copySelectedCells: () => {
-      copySelectedCells()
-    },
-    pasteToSelectedCells: () => {
-      pasteToSelectedCells()
-    },
-    startEditing: () => {
-      startEditing()
-    },
-    stopEditing: (save = true) => {
-      stopEditing(save)
-    },
-    clearSelectedCells,
-    isEditing
-  })
 
   // マウスダウンイベントハンドラー（Shiftキーの状態を取得）
   const handleCellMouseDown = (rowIndex: number, colIndex: number, e: MouseEvent) => {
