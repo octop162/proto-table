@@ -126,7 +126,7 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     return data.map((row, rowIndex) => (
       <tr key={rowIndex}>
         {row.map((_, colIndex) => (
-          <td key={colIndex} className={styles.cell}>
+          <td key={colIndex} className={styles.cell} style={{ padding: 0, borderSpacing: 0 }}>
             {renderCell(rowIndex, colIndex)}
           </td>
         ))}
@@ -202,7 +202,7 @@ export const Table: FC<TableProps> = ({ initialData }) => {
       {renderToolbar()}
       
       <div className={styles.tableContainer}>
-        <table className={styles.table}>
+        <table className={styles.table} cellSpacing="0" cellPadding="0">
           <tbody>
             {renderRows()}
           </tbody>

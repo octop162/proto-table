@@ -51,12 +51,21 @@
   width: auto;
   table-layout: fixed;
   background-color: white;
+  border-spacing: 0;
 }
 
 .cell {
   padding: 0;
   border: 1px solid #ddd;
   position: relative;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* セルの内部要素が境界を超えないようにする */
+.cell > div {
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .actions {
