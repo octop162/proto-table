@@ -1,4 +1,4 @@
-import { FC, useRef, useEffect, MouseEvent, useState } from 'react'
+import { FC, useRef, useEffect, MouseEvent, useState, useCallback } from 'react'
 import { Cell } from './Cell'
 import { TableData } from '../types/table'
 import styles from './Table.module.css'
@@ -8,6 +8,7 @@ import { useClipboard } from '../hooks/useClipboard'
 import { useCellEditing } from '../hooks/useCellEditing'
 import { useKeyboardEvents } from '../hooks/useKeyboardEvents'
 import { ShortcutHelp } from './ShortcutHelp'
+import { convertToMarkdown } from '../utils/markdownConverter'
 
 type TableProps = {
   initialData: TableData
@@ -16,6 +17,7 @@ type TableProps = {
 export const Table: FC<TableProps> = ({ initialData }) => {
   const tableRef = useRef<HTMLDivElement>(null)
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false)
+  const [markdownCopied, setMarkdownCopied] = useState(false)
   
   // テーブルデータの管理
   const { 
@@ -62,6 +64,21 @@ export const Table: FC<TableProps> = ({ initialData }) => {
   const showShortcutHelp = () => {
     setIsShortcutHelpOpen(true)
   }
+
+  // Markdownとしてクリップボードにコピー
+  const copyAsMarkdown = useCallback(() => {
+    if (!data || data.length === 0) return
+    
+    const markdown = convertToMarkdown(data)
+    navigator.clipboard.writeText(markdown)
+      .then(() => {
+        setMarkdownCopied(true)
+        setTimeout(() => setMarkdownCopied(false), 2000)
+      })
+      .catch(err => {
+        console.error('Markdownのコピーに失敗しました:', err)
+      })
+  }, [data])
 
   // 初期状態ではisEditingはfalse
   const isEditingRef = useRef(false)
@@ -222,12 +239,11 @@ export const Table: FC<TableProps> = ({ initialData }) => {
             ペースト
           </button>
           <button 
-            onClick={clearSelectedCells} 
+            onClick={copyAsMarkdown} 
             className={styles.toolbarButton} 
-            disabled={!selection}
-            title="クリア (Delete)"
+            title="Markdownとしてコピー"
           >
-            クリア
+            Markdownコピー
           </button>
         </div>
 
@@ -282,6 +298,12 @@ export const Table: FC<TableProps> = ({ initialData }) => {
           </tbody>
         </table>
       </div>
+
+      {markdownCopied && (
+        <div className={styles.notification}>
+          Markdownとしてコピーしました
+        </div>
+      )}
 
       <ShortcutHelp 
         isOpen={isShortcutHelpOpen} 
