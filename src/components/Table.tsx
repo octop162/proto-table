@@ -1,4 +1,4 @@
-import { FC, useRef, useEffect } from 'react'
+import { FC, useRef, useEffect, MouseEvent } from 'react'
 import { Cell } from './Cell'
 import { TableData } from '../types/table'
 import styles from './Table.module.css'
@@ -90,6 +90,11 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     isEditing
   })
 
+  // マウスダウンイベントハンドラー（Shiftキーの状態を取得）
+  const handleCellMouseDown = (rowIndex: number, colIndex: number, e: MouseEvent) => {
+    handleMouseDown(rowIndex, colIndex, e.shiftKey)
+  }
+
   // セルのレンダリング
   const renderCell = (rowIndex: number, colIndex: number) => {
     const cell = data[rowIndex][colIndex]
@@ -108,7 +113,7 @@ export const Table: FC<TableProps> = ({ initialData }) => {
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         onDoubleClick={() => startEditing()}
-        onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
+        onMouseDown={(e) => handleCellMouseDown(rowIndex, colIndex, e)}
         onMouseMove={() => handleMouseMove(rowIndex, colIndex)}
         onMouseEnter={() => handleMouseMove(rowIndex, colIndex)}
         onMouseUp={handleMouseUp}

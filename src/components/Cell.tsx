@@ -1,4 +1,4 @@
-import { FC, KeyboardEvent, useState, useEffect, useRef, CSSProperties } from 'react'
+import { FC, KeyboardEvent, useState, useEffect, useRef, CSSProperties, MouseEvent } from 'react'
 import styles from './Cell.module.css'
 
 type CellProps = {
@@ -12,7 +12,7 @@ type CellProps = {
   onCompositionStart?: () => void
   onCompositionEnd?: () => void
   onDoubleClick?: () => void
-  onMouseDown?: () => void
+  onMouseDown?: (e: MouseEvent<HTMLDivElement>) => void
   onMouseMove?: () => void
   onMouseUp?: () => void
   onMouseEnter?: () => void
@@ -129,10 +129,10 @@ export const Cell: FC<CellProps> = ({
   }
 
   // マウスダウン時の処理
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
     // 左クリックのみ処理
     if (e.button === 0 && onMouseDown) {
-      onMouseDown()
+      onMouseDown(e)
     }
   }
 

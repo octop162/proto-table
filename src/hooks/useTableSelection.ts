@@ -71,22 +71,37 @@ export const useTableSelection = (data: TableData) => {
    * マウスダウンイベントのハンドラー
    * @param rowIndex 行インデックス
    * @param colIndex 列インデックス
+   * @param shiftKey Shiftキーが押されているかどうか
    */
-  const handleMouseDown = useCallback((rowIndex: number, colIndex: number) => {
+  const handleMouseDown = useCallback((rowIndex: number, colIndex: number, shiftKey = false) => {
     const position = { row: rowIndex, col: colIndex }
-    dragStartRef.current = position
-    setIsDragging(true)
     
-    // 現在のセルを更新
-    setCurrentCell(position)
-    
-    // 単一選択で開始
-    setSelectionAnchor(position)
-    setSelection({
-      start: position,
-      end: position
-    })
-  }, [])
+    // Shiftキーが押されている場合は選択範囲を拡張
+    if (shiftKey && selectionAnchor) {
+      setCurrentCell(position)
+      setSelection({
+        start: selectionAnchor,
+        end: position
+      })
+      // ドラッグ開始位置を設定（Shiftキーでの選択でもドラッグを可能にする）
+      dragStartRef.current = position
+      setIsDragging(true)
+    } else {
+      // 通常のクリック（単一選択）
+      dragStartRef.current = position
+      setIsDragging(true)
+      
+      // 現在のセルを更新
+      setCurrentCell(position)
+      
+      // 単一選択で開始
+      setSelectionAnchor(position)
+      setSelection({
+        start: position,
+        end: position
+      })
+    }
+  }, [selectionAnchor])
 
   /**
    * マウスムーブイベントのハンドラー
@@ -98,11 +113,14 @@ export const useTableSelection = (data: TableData) => {
     
     // ドラッグ中は選択範囲を更新
     setCurrentCell({ row: rowIndex, col: colIndex })
+    
+    // ドラッグ中はアンカーを維持して選択範囲を更新
+    const anchor = selectionAnchor || dragStartRef.current
     setSelection({
-      start: dragStartRef.current,
+      start: anchor,
       end: { row: rowIndex, col: colIndex }
     })
-  }, [isDragging])
+  }, [isDragging, selectionAnchor])
 
   /**
    * マウスアップイベントのハンドラー
