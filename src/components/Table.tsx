@@ -53,7 +53,8 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    clearSelection
+    clearSelection,
+    selectAllCells
   } = useTableSelection(data)
   
   // 選択されたセルをクリア
@@ -153,7 +154,8 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     isEditing: isEditingRef.current,  // 初期状態
     showShortcutHelp,
     undo: undoAction,
-    redo: redoAction
+    redo: redoAction,
+    selectAllCells
   })
   
   // セル編集の管理
@@ -176,9 +178,10 @@ export const Table: FC<TableProps> = ({ initialData }) => {
       pasteToSelectedCells,
       showShortcutHelp,
       undo: undoAction,
-      redo: redoAction
+      redo: redoAction,
+      selectAllCells
     })
-  }, [isEditing, startEditing, stopEditing, copySelectedCells, cutSelectedCells, pasteToSelectedCells, updateHandlers, undoAction, redoAction])
+  }, [isEditing, startEditing, stopEditing, copySelectedCells, cutSelectedCells, pasteToSelectedCells, updateHandlers, undoAction, redoAction, selectAllCells])
 
   // マウスダウンイベントハンドラー（Shiftキーの状態を取得）
   const handleCellMouseDown = (rowIndex: number, colIndex: number, e: MouseEvent) => {
@@ -253,6 +256,13 @@ export const Table: FC<TableProps> = ({ initialData }) => {
             title="Markdownとしてコピー"
           >
             Markdownコピー
+          </button>
+          <button 
+            onClick={selectAllCells} 
+            className={styles.toolbarButton} 
+            title="すべて選択 (Ctrl+A)"
+          >
+            すべて選択
           </button>
         </div>
 

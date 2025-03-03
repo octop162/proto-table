@@ -14,6 +14,7 @@ type KeyboardEventHandlers = {
   showShortcutHelp?: () => void  // ショートカットヘルプ表示用
   undo?: () => void  // 元に戻す
   redo?: () => void  // やり直し
+  selectAllCells?: () => void  // すべてのセルを選択
 }
 
 /**
@@ -97,6 +98,15 @@ export const useKeyboardEvents = (
       }
 
       // 以下、編集モードでない場合の処理
+
+      // Ctrl+A または Cmd+A ですべて選択
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        if (currentHandlers.selectAllCells) {
+          currentHandlers.selectAllCells()
+        }
+        return
+      }
 
       // 矢印キーでセル移動
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {

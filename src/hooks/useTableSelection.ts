@@ -104,7 +104,7 @@ export const useTableSelection = (data: TableData) => {
   }, [selectionAnchor])
 
   /**
-   * マウスムーブイベントのハンドラー
+   * マウス移動イベントのハンドラー
    * @param rowIndex 行インデックス
    * @param colIndex 列インデックス
    */
@@ -113,14 +113,11 @@ export const useTableSelection = (data: TableData) => {
     
     // ドラッグ中は選択範囲を更新
     setCurrentCell({ row: rowIndex, col: colIndex })
-    
-    // ドラッグ中はアンカーを維持して選択範囲を更新
-    const anchor = selectionAnchor || dragStartRef.current
     setSelection({
-      start: anchor,
+      start: dragStartRef.current,
       end: { row: rowIndex, col: colIndex }
     })
-  }, [isDragging, selectionAnchor])
+  }, [isDragging])
 
   /**
    * マウスアップイベントのハンドラー
@@ -131,7 +128,7 @@ export const useTableSelection = (data: TableData) => {
   }, [])
 
   /**
-   * 選択を解除
+   * 選択範囲をクリア
    */
   const clearSelection = useCallback(() => {
     setCurrentCell(null)
@@ -150,61 +147,56 @@ export const useTableSelection = (data: TableData) => {
   }, [])
 
   /**
-   * 選択範囲を移動
+   * 選択を移動
    * @param direction 移動方向
    */
   const moveSelection = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
-    if (!currentCell) return
+    if (!currentCell) {
+      // 現在のセルがない場合は最初のセルを選択
+      selectCell(0, 0)
+      return
+    }
 
     const { row, col } = currentCell
     let newRow = row
     let newCol = col
 
+    // 方向に応じて移動
     switch (direction) {
       case 'up':
-        if (row > 0) newRow = row - 1
+        newRow = Math.max(0, row - 1)
         break
       case 'down':
-        if (row < data.length - 1) newRow = row + 1
+        newRow = Math.min(data.length - 1, row + 1)
         break
       case 'left':
-        if (col > 0) newCol = col - 1
+        newCol = Math.max(0, col - 1)
         break
       case 'right':
-        if (col < data[0].length - 1) newCol = col + 1
+        newCol = Math.min(data[0].length - 1, col + 1)
         break
     }
 
-    // 現在のセルを更新
-    setCurrentCell({ row: newRow, col: newCol })
-    
-    if (isShiftPressed) {
-      // Shiftキーが押されている場合は選択範囲を拡大/縮小
-      if (!selectionAnchor && selection) {
-        // 初回のShift+移動の場合、現在の選択範囲の開始位置をアンカーとして設定
-        setSelectionAnchor(selection.start)
-      }
-      
-      const anchor = selectionAnchor || (selection ? selection.start : { row: newRow, col: newCol })
-      
+    // 移動先が現在のセルと同じ場合は何もしない
+    if (newRow === row && newCol === col) return
+
+    // 新しいセルを選択
+    if (isShiftPressed && selectionAnchor) {
+      // Shiftキーが押されている場合は選択範囲を拡張
+      setCurrentCell({ row: newRow, col: newCol })
       setSelection({
-        start: anchor,
+        start: selectionAnchor,
         end: { row: newRow, col: newCol }
       })
     } else {
       // 単一選択
-      const newPosition = { row: newRow, col: newCol }
-      setSelectionAnchor(newPosition)
-      setSelection({
-        start: newPosition,
-        end: newPosition
-      })
+      selectCell(newRow, newCol)
     }
-  }, [currentCell, data, isShiftPressed, selectionAnchor, selection])
+  }, [currentCell, data, isShiftPressed, selectionAnchor, selectCell])
 
   /**
-   * 選択範囲内のすべてのセルの位置を取得
-   * @returns 選択範囲内のセルの位置の配列
+   * 選択されたセルの位置を取得
+   * @returns 選択されたセルの位置の配列
    */
   const getSelectedCellPositions = useCallback((): Position[] => {
     if (!selection) return []
@@ -225,6 +217,26 @@ export const useTableSelection = (data: TableData) => {
     return positions
   }, [selection])
 
+  /**
+   * すべてのセルを選択
+   */
+  const selectAllCells = useCallback(() => {
+    if (data.length === 0 || data[0].length === 0) return;
+    
+    const startPosition = { row: 0, col: 0 };
+    const endPosition = { 
+      row: data.length - 1, 
+      col: data[0].length - 1 
+    };
+    
+    setCurrentCell(startPosition);
+    setSelectionAnchor(startPosition);
+    setSelection({
+      start: startPosition,
+      end: endPosition
+    });
+  }, [data]);
+
   return {
     currentCell,
     selection,
@@ -233,12 +245,13 @@ export const useTableSelection = (data: TableData) => {
     isCellSelected,
     isCellEditing,
     selectCell,
-    clearSelection,
     setShiftKey,
     moveSelection,
     getSelectedCellPositions,
     handleMouseDown,
     handleMouseMove,
-    handleMouseUp
+    handleMouseUp,
+    clearSelection,
+    selectAllCells
   }
 } 

@@ -38,6 +38,10 @@ export const ShortcutHelp: React.FC<ShortcutHelpProps> = ({ isOpen, onClose }) =
                 <td>貼り付け</td>
               </tr>
               <tr>
+                <td>Ctrl+A / ⌘+A</td>
+                <td>すべて選択</td>
+              </tr>
+              <tr>
                 <td>Ctrl+Z / ⌘+Z</td>
                 <td>元に戻す</td>
               </tr>
