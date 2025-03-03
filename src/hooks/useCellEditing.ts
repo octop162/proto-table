@@ -14,6 +14,8 @@ export const useCellEditing = (
   const isComposingRef = useRef(false)
   const prevCellRef = useRef<Position | null>(null)
   const initialEditValueRef = useRef<string>('')
+  const editValueRef = useRef<string>('')  // 現在の編集値を参照するためのref
+  const hasEditedRef = useRef(false)  // 編集されたかどうかを追跡するref
 
   // 現在のセルが変わったときに編集状態をリセット
   useEffect(() => {
@@ -22,7 +24,9 @@ export const useCellEditing = (
       const cellValue = data[row][col].value
       const stringValue = cellValue !== undefined ? String(cellValue) : ''
       setEditValue(stringValue)
+      editValueRef.current = stringValue  // refも更新
       initialEditValueRef.current = stringValue
+      hasEditedRef.current = false  // 編集フラグをリセット
     }
 
     // 編集中に別のセルに移動した場合、前のセルの編集を終了して保存
@@ -30,13 +34,16 @@ export const useCellEditing = (
     if (!isComposingRef.current && isEditing && currentCell && prevCellRef.current && 
         (prevCellRef.current.row !== currentCell.row || prevCellRef.current.col !== currentCell.col)) {
       const { row, col } = prevCellRef.current
-      updateCell(row, col, editValue)
+      if (hasEditedRef.current) {
+        updateCell(row, col, editValueRef.current)  // 最新の編集値を使用
+      }
       setIsEditing(false)
+      hasEditedRef.current = false  // 編集フラグをリセット
     }
 
     // 現在のセルを記録
     prevCellRef.current = currentCell
-  }, [currentCell, data, isEditing, editValue, updateCell])
+  }, [currentCell, data, isEditing, updateCell])
 
   /**
    * 編集を開始
@@ -49,7 +56,9 @@ export const useCellEditing = (
     const cellValue = data[row][col].value;
     const stringValue = cellValue !== undefined ? String(cellValue) : '';
     setEditValue(stringValue);
+    editValueRef.current = stringValue;  // refも更新
     initialEditValueRef.current = stringValue;
+    hasEditedRef.current = false;  // 編集フラグをリセット
     setIsEditing(true)
   }, [currentCell, data])
 
@@ -65,23 +74,30 @@ export const useCellEditing = (
 
     const { row, col } = currentCell
 
-    if (save) {
-      // 変更を保存
-      updateCell(row, col, editValue)
-    } else {
+    if (save && hasEditedRef.current) {
+      // 変更を保存（編集があった場合のみ）
+      // 現在の編集値を使用して更新
+      updateCell(row, col, editValueRef.current)  // 最新の編集値を使用
+    } else if (!save) {
       // 編集をキャンセルした場合は元の値に戻す
       setEditValue(initialEditValueRef.current)
+      editValueRef.current = initialEditValueRef.current  // refも更新
     }
 
     setIsEditing(false)
-  }, [currentCell, isEditing, editValue, updateCell])
+    hasEditedRef.current = false  // 編集フラグをリセット
+  }, [currentCell, isEditing, updateCell])
 
   /**
    * 編集中の値を更新
    * @param value 新しい値
    */
   const handleEditChange = useCallback((value: string) => {
-    setEditValue(value)
+    if (value !== editValueRef.current) {
+      setEditValue(value)
+      editValueRef.current = value  // refも更新
+      hasEditedRef.current = true  // 編集フラグを設定
+    }
   }, [])
 
   /**
@@ -96,6 +112,10 @@ export const useCellEditing = (
    */
   const handleCompositionEnd = useCallback(() => {
     isComposingRef.current = false
+    // IME入力完了時に編集フラグを設定
+    if (editValueRef.current !== initialEditValueRef.current) {
+      hasEditedRef.current = true
+    }
   }, [])
 
   /**
@@ -107,7 +127,9 @@ export const useCellEditing = (
     const { row, col } = currentCell
     updateCell(row, col, '')
     setEditValue('')
+    editValueRef.current = ''  // refも更新
     initialEditValueRef.current = ''
+    hasEditedRef.current = false  // 編集フラグをリセット
   }, [currentCell, updateCell])
 
   return {

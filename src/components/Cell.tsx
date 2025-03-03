@@ -40,6 +40,8 @@ export const Cell: FC<CellProps> = ({
   const [prevValue, setPrevValue] = useState(value)
   const [hasUserEdited, setHasUserEdited] = useState(false)
   const isComposingRef = useRef(false)
+  const inputValueRef = useRef(value || '')  // 入力値を参照するためのref
+  const lastNotifiedValueRef = useRef(value || '')  // 最後に通知した値を記録するref
 
   // セルのスタイルを計算
   const cellStyle: CSSProperties = {
@@ -54,6 +56,8 @@ export const Cell: FC<CellProps> = ({
     if (!prevIsEditing && isEditing) {
       // 編集モードが開始された場合
       setInputValue(value || '')
+      inputValueRef.current = value || ''
+      lastNotifiedValueRef.current = value || ''
       setHasUserEdited(false)
       
       // フォーカスを当てて、テキストを全選択
@@ -66,6 +70,8 @@ export const Cell: FC<CellProps> = ({
     } else if (!isEditing && prevValue !== value) {
       // 編集モードでなく、propsの値が変わった場合
       setInputValue(value || '')
+      inputValueRef.current = value || ''
+      lastNotifiedValueRef.current = value || ''
       setHasUserEdited(false)
     }
     
@@ -73,15 +79,28 @@ export const Cell: FC<CellProps> = ({
     setPrevValue(value)
   }, [isEditing, value, prevIsEditing, prevValue])
 
+  // 編集モードが終了するときに値を確実に親に通知
+  useEffect(() => {
+    if (prevIsEditing && !isEditing && hasUserEdited) {
+      // 編集モードが終了した場合、変更があれば親に通知
+      if (inputValueRef.current !== lastNotifiedValueRef.current) {
+        onEdit(inputValueRef.current)
+        lastNotifiedValueRef.current = inputValueRef.current
+      }
+    }
+  }, [isEditing, prevIsEditing, hasUserEdited, onEdit])
+
   // 入力値の変更を処理
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
     setInputValue(newValue)
+    inputValueRef.current = newValue
     setHasUserEdited(true)
     
     // IME入力中は親コンポーネントに通知しない
     if (!isComposingRef.current) {
       onEdit(newValue)
+      lastNotifiedValueRef.current = newValue
     }
   }
 
@@ -89,7 +108,11 @@ export const Cell: FC<CellProps> = ({
   const handleBlur = () => {
     // 編集中の場合のみ処理
     if (isEditing && hasUserEdited) {
-      onEdit(inputValue)
+      // 確実に最新の値を親に通知
+      if (inputValueRef.current !== lastNotifiedValueRef.current) {
+        onEdit(inputValueRef.current)
+        lastNotifiedValueRef.current = inputValueRef.current
+      }
     }
   }
 
@@ -151,13 +174,23 @@ export const Cell: FC<CellProps> = ({
     }
     
     // IME入力完了時に親コンポーネントに通知
-    if (hasUserEdited) {
-      onEdit(inputValue)
+    if (hasUserEdited && inputValueRef.current !== lastNotifiedValueRef.current) {
+      onEdit(inputValueRef.current)
+      lastNotifiedValueRef.current = inputValueRef.current
     }
   }
 
   // キーダウン時の処理
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Enter または Tab キーが押された場合、現在の入力値を親コンポーネントに通知
+    if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
+      // 現在の入力値を確実に親コンポーネントに通知
+      if (hasUserEdited && inputValueRef.current !== lastNotifiedValueRef.current) {
+        onEdit(inputValueRef.current)
+        lastNotifiedValueRef.current = inputValueRef.current
+      }
+    }
+    
     if (onKeyDown) {
       onKeyDown(e)
     }
