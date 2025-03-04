@@ -64,6 +64,13 @@
   margin: 0;
 }
 
+.selectedCell {
+  background-color: rgba(0, 120, 215, 0.2);
+  border: 1px solid rgba(0, 120, 215, 0.5);
+  outline: none;
+  z-index: 1;
+}
+
 .actions {
   margin-top: 16px;
   display: flex;

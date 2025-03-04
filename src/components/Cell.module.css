@@ -14,11 +14,9 @@
   margin: 0;
 }
 
-.selected {
-  background-color: rgba(0, 120, 215, 0.2);
-  border: 1px solid rgba(0, 120, 215, 0.5);
-  outline: none;
-  z-index: 1;
+/* ホバー時のスタイル */
+.cell:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .cellContent {
@@ -52,9 +50,4 @@
   box-shadow: 0 0 0 2px #4a90e2;
   z-index: 10;
   background-color: #fff;
-}
-
-/* ホバー時のスタイル */
-.cell:hover:not(.selected) {
-  background-color: rgba(0, 0, 0, 0.05);
 } 

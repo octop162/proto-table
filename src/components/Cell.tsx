@@ -256,7 +256,7 @@ export const Cell: FC<CellProps> = ({
 
   return (
     <div
-      className={`${styles.cell} ${isSelected ? styles.selected : ''}`}
+      className={`${styles.cell}`}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onMouseDown={handleMouseDown}

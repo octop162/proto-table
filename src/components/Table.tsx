@@ -219,11 +219,18 @@ export const Table: FC<TableProps> = ({ initialData }) => {
   const renderRows = () => {
     return data.map((row, rowIndex) => (
       <tr key={rowIndex}>
-        {row.map((_, colIndex) => (
-          <td key={colIndex} className={styles.cell} style={{ padding: 0, borderSpacing: 0 }}>
-            {renderCell(rowIndex, colIndex)}
-          </td>
-        ))}
+        {row.map((_, colIndex) => {
+          const selected = isCellSelected(rowIndex, colIndex);
+          return (
+            <td 
+              key={colIndex} 
+              className={`${styles.cell} ${selected ? styles.selectedCell : ''}`} 
+              style={{ padding: 0, borderSpacing: 0 }}
+            >
+              {renderCell(rowIndex, colIndex)}
+            </td>
+          );
+        })}
       </tr>
     ))
   }
