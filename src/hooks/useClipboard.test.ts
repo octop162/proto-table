@@ -298,4 +298,62 @@ describe('useClipboard', () => {
     expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'X2')
     expect(mockUpdateCell).toHaveBeenCalledWith(1, 2, 'X2')
   })
+
+  it('pasteToSelectedCells: セル内改行を含むデータを正しくペーストできること', async () => {
+    // セル内改行を含むデータ（より単純なケース）
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+        readText: vi.fn().mockResolvedValue('"Line1\nLine2"')
+      },
+      configurable: true
+    })
+    
+    const { result } = renderHook(() => useClipboard({
+      tableData: mockTableData,
+      selectedCells: null,
+      currentCell: { row: 0, col: 0 },
+      updateCell: mockUpdateCell,
+      updateMultipleCells: mockUpdateMultipleCells,
+      addRow: mockAddRow,
+      addColumn: mockAddColumn
+    }))
+    
+    await result.current.pasteToSelectedCells()
+    
+    // セル内改行を含むデータが正しくペーストされたことを確認
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'Line1\nLine2')
+  })
+
+  it('pasteToSelectedCells: 複数のセルと改行を含むデータを正しくペーストできること', async () => {
+    // テスト前にモックをクリア
+    vi.clearAllMocks()
+    
+    // 複数のセルと改行を含むデータ
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+        readText: vi.fn().mockResolvedValue('"Line1\nLine2"\tB1\n"C1\nC2\nC3"\tD1')
+      },
+      configurable: true
+    })
+    
+    const { result } = renderHook(() => useClipboard({
+      tableData: mockTableData,
+      selectedCells: null,
+      currentCell: { row: 0, col: 0 },
+      updateCell: mockUpdateCell,
+      updateMultipleCells: mockUpdateMultipleCells,
+      addRow: mockAddRow,
+      addColumn: mockAddColumn
+    }))
+    
+    await result.current.pasteToSelectedCells()
+    
+    // 複数のセルと改行を含むデータが正しくペーストされたことを確認
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'Line1\nLine2')
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'B1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'C1\nC2\nC3')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'D1')
+  })
 }) 

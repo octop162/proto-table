@@ -96,41 +96,6 @@ export const useClipboard = ({
   }, []);
 
   /**
-   * Excel形式の行データをパース
-   */
-  const parseExcelRow = useCallback((row: string): string[] => {
-    const fields = [];
-    let currentField = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < row.length; i++) {
-      const char = row[i];
-      
-      if (char === '"') {
-        // 次の文字も"の場合はエスケープされた"
-        if (i + 1 < row.length && row[i + 1] === '"') {
-          currentField += '"';
-          i++; // 次の"をスキップ
-        } else {
-          // 引用符の開始または終了
-          inQuotes = !inQuotes;
-        }
-      } else if (char === '\t' && !inQuotes) {
-        // 引用符の外側のタブは区切り文字
-        fields.push(parseCellValueFromExcel(currentField));
-        currentField = '';
-      } else {
-        // 通常の文字
-        currentField += char;
-      }
-    }
-    
-    // 最後のフィールドを追加
-    fields.push(parseCellValueFromExcel(currentField));
-    return fields;
-  }, [parseCellValueFromExcel]);
-
-  /**
    * 選択されたセルをコピー
    */
   const copySelectedCells = useCallback(() => {
@@ -181,18 +146,50 @@ export const useClipboard = ({
       // 改行コードを正規化（CRLF -> LF）
       const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       
-      // 末尾の改行を除去しつつ、空の行も保持する
-      const rows = normalizedText.endsWith('\n') 
-        ? normalizedText.slice(0, -1).split('\n') 
-        : normalizedText.split('\n');
+      // Excel形式のデータを解析（セル内改行を考慮）
+      const rows: string[][] = [];
+      let currentRow: string[] = [];
+      let currentField = '';
+      let inQuotes = false;
+      
+      // 文字ごとに処理
+      for (let i = 0; i < normalizedText.length; i++) {
+        const char = normalizedText[i];
+        
+        if (char === '"') {
+          // 次の文字も"の場合はエスケープされた"
+          if (i + 1 < normalizedText.length && normalizedText[i + 1] === '"') {
+            currentField += '"';
+            i++; // 次の"をスキップ
+          } else {
+            // 引用符の開始または終了
+            inQuotes = !inQuotes;
+          }
+        } else if (char === '\t' && !inQuotes) {
+          // 引用符の外側のタブは列の区切り
+          currentRow.push(parseCellValueFromExcel(currentField));
+          currentField = '';
+        } else if (char === '\n' && !inQuotes) {
+          // 引用符の外側の改行は行の区切り
+          currentRow.push(parseCellValueFromExcel(currentField));
+          rows.push(currentRow);
+          currentRow = [];
+          currentField = '';
+        } else {
+          // 通常の文字（セル内の改行も含む）
+          currentField += char;
+        }
+      }
+      
+      // 最後のフィールドと行を追加
+      if (currentField || currentRow.length > 0) {
+        currentRow.push(parseCellValueFromExcel(currentField));
+        rows.push(currentRow);
+      }
       
       // クリップボードデータの行数と列数を取得
       const clipboardRowCount = rows.length;
-      
-      // Excel形式のセル値を考慮して列数を計算
-      const clipboardColCount = Math.max(...rows.map(row => {
-        return parseExcelRow(row).length;
-      }));
+      const clipboardColCount = Math.max(...rows.map(row => row.length));
       
       // クリップボードデータが横一列または縦一列かどうかを判定
       const isSingleRow = clipboardRowCount === 1 && clipboardColCount > 1;
@@ -274,8 +271,7 @@ export const useClipboard = ({
       if (needsRepeatedPaste) {
         if (isSingleCell && selectedCells) {
           // 単一セルのコピーを複数選択したセルすべてにペースト
-          // Excel形式のセル値をパース
-          const cellValue = parseExcelRow(rows[0])[0];
+          const cellValue = rows[0][0];
           const positions = getSelectedCellPositions();
           
           // 選択したすべてのセルに同じ値をペースト
@@ -287,11 +283,8 @@ export const useClipboard = ({
           });
         } else if (isSingleRow) {
           // 横一列のデータを縦に繰り返す場合
-          // Excel形式のセル値をパース
-          const cells = parseExcelRow(rows[0]);
-          
           for (let rowOffset = 0; rowOffset < selectionRowCount; rowOffset++) {
-            cells.forEach((cellValue, colOffset) => {
+            rows[0].forEach((cellValue, colOffset) => {
               const targetRow = startRow + rowOffset;
               const targetCol = startCol + colOffset;
               
@@ -304,8 +297,7 @@ export const useClipboard = ({
         } else if (isSingleColumn) {
           // 縦一列のデータを横に繰り返す場合
           for (let rowOffset = 0; rowOffset < clipboardRowCount; rowOffset++) {
-            // Excel形式のセル値をパース
-            const cellValue = parseExcelRow(rows[rowOffset])[0];
+            const cellValue = rows[rowOffset][0];
             
             for (let colOffset = 0; colOffset < selectionColCount; colOffset++) {
               const targetRow = startRow + rowOffset;
@@ -321,9 +313,7 @@ export const useClipboard = ({
       } else {
         // 通常のペースト
         rows.forEach((row, rowOffset) => {
-          // Excel形式のセル値をパース
-          const cells = parseExcelRow(row);
-          cells.forEach((cellValue, colOffset) => {
+          row.forEach((cellValue, colOffset) => {
             const targetRow = startRow + rowOffset;
             const targetCol = startCol + colOffset;
             
@@ -337,7 +327,7 @@ export const useClipboard = ({
     } catch (err) {
       console.error('クリップボードからの読み取りに失敗しました:', err);
     }
-  }, [currentCell, tableData, updateCell, addRow, addColumn, selectedCells, parseCellValueFromExcel, parseExcelRow, getSelectedCellPositions]);
+  }, [currentCell, tableData, updateCell, addRow, addColumn, selectedCells, parseCellValueFromExcel, getSelectedCellPositions]);
 
   return {
     copySelectedCells,
