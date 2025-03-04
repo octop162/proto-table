@@ -137,9 +137,6 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     setTimeout(() => setMarkdownCopied(false), 2000)
   }, [data])
 
-  // 初期状態ではisEditingはfalse
-  const isEditingRef = useRef(false)
-  
   // キーボードイベントの管理（初期設定）
   const { getPendingKey, updateHandlers } = useKeyboardEvents(data, {
     moveSelection,
@@ -147,10 +144,10 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     copySelectedCells,
     cutSelectedCells,
     pasteToSelectedCells,
-    startEditing: () => {},  // 後で上書き
-    stopEditing: () => {},  // 後で上書き
+    startEditing: () => {}, // 一時的なダミー関数
+    stopEditing: () => {}, // 一時的なダミー関数
     clearSelectedCells,
-    isEditing: isEditingRef.current,  // 初期状態
+    isEditing: false, // 初期状態
     showShortcutHelp,
     undo: undoAction,
     redo: redoAction,
@@ -166,7 +163,7 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     handleCompositionStart,
     handleCompositionEnd
   } = useCellEditing(data, currentCell, updateCell, getPendingKey)
-  
+
   // ハンドラーを更新
   useEffect(() => {
     updateHandlers({

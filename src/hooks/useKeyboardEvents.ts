@@ -143,13 +143,6 @@ export const useKeyboardEvents = (
         return
       }
 
-      // F2またはEnterキーで編集開始
-      if (e.key === 'F2' || (e.key === 'Enter' && !e.shiftKey)) {
-        e.preventDefault()
-        currentHandlers.startEditing()
-        return
-      }
-
       // DeleteまたはBackspaceキーでセルクリア
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault()
@@ -207,18 +200,7 @@ export const useKeyboardEvents = (
         return
       }
 
-      // 通常の文字キーが押された場合、編集モードを開始して入力
-      if (
-        e.key.length === 1 && 
-        !e.ctrlKey && 
-        !e.metaKey && 
-        !e.altKey
-      ) {
-        e.preventDefault()
-        pendingKeyRef.current = e.key
-        currentHandlers.startEditing()
-        return
-      }
+      // 通常の文字キーによる編集開始機能は削除
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {

@@ -86,22 +86,6 @@ describe('useKeyboardEvents', () => {
     expect(mockHandlers.moveSelection).toHaveBeenCalledWith('right')
   })
   
-  it('Enterキーで編集モードを開始できること', () => {
-    renderHook(() => useKeyboardEvents(mockData, mockHandlers))
-    
-    const enterEvent = simulateKeyDown('Enter')
-    expect(enterEvent.defaultPrevented).toBe(true)
-    expect(mockHandlers.startEditing).toHaveBeenCalled()
-  })
-  
-  it('F2キーで編集モードを開始できること', () => {
-    renderHook(() => useKeyboardEvents(mockData, mockHandlers))
-    
-    const f2Event = simulateKeyDown('F2')
-    expect(f2Event.defaultPrevented).toBe(true)
-    expect(mockHandlers.startEditing).toHaveBeenCalled()
-  })
-  
   it('Deleteキーでセルをクリアできること', () => {
     renderHook(() => useKeyboardEvents(mockData, mockHandlers))
     
@@ -164,14 +148,6 @@ describe('useKeyboardEvents', () => {
     const cmdVEvent = simulateKeyDown('v', { metaKey: true })
     expect(cmdVEvent.defaultPrevented).toBe(true)
     expect(mockHandlers.pasteToSelectedCells).toHaveBeenCalled()
-  })
-  
-  it('通常の文字キーで編集モードを開始できること', () => {
-    renderHook(() => useKeyboardEvents(mockData, mockHandlers))
-    
-    const letterEvent = simulateKeyDown('a')
-    expect(letterEvent.defaultPrevented).toBe(true)
-    expect(mockHandlers.startEditing).toHaveBeenCalled()
   })
   
   it('Shiftキーを押すとsetShiftKeyが呼ばれること', () => {
