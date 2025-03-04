@@ -19,6 +19,7 @@
 .toolbarGroup {
   display: flex;
   gap: 4px;
+  align-items: center;
 }
 
 .toolbarButton {
@@ -37,6 +38,13 @@
 .toolbarButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.toolbarDivider {
+  width: 1px;
+  height: 24px;
+  background-color: #ccc;
+  margin: 0 8px;
 }
 
 .tableContainer {

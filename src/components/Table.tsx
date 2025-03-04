@@ -9,6 +9,8 @@ import { useCellEditing } from '../hooks/useCellEditing'
 import { useKeyboardEvents } from '../hooks/useKeyboardEvents'
 import { ShortcutHelp } from './ShortcutHelp'
 import { convertToMarkdown } from '../utils/markdownConverter'
+import { IconButton } from './IconButton'
+import { IconType } from '../types/icons'
 
 type TableProps = {
   initialData: TableData
@@ -234,97 +236,103 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     return (
       <div className={styles.toolbar}>
         <div className={styles.toolbarGroup}>
-          <button onClick={() => copySelectedCells()} className={styles.toolbarButton} disabled={!selection} title="コピー (Ctrl+C)">
-            コピー
-          </button>
-          <button onClick={() => cutSelectedCells()} className={styles.toolbarButton} disabled={!selection} title="カット (Ctrl+X)">
-            カット
-          </button>
-          <button 
+          <IconButton 
+            iconType={IconType.COPY} 
+            onClick={copySelectedCells} 
+            disabled={!selection} 
+            title="コピー (Ctrl+C)" 
+          />
+          <IconButton 
+            iconType={IconType.CUT} 
+            onClick={cutSelectedCells} 
+            disabled={!selection} 
+            title="カット (Ctrl+X)" 
+          />
+          <IconButton 
+            iconType={IconType.PASTE} 
             onClick={() => {
               if (currentCell) {
                 pasteToSelectedCells()
               }
             }} 
-            className={styles.toolbarButton} 
-            disabled={!currentCell}
-            title="ペースト (Ctrl+V)"
-          >
-            ペースト
-          </button>
-          <button 
+            disabled={!currentCell} 
+            title="ペースト (Ctrl+V)" 
+          />
+          <IconButton 
+            iconType={IconType.MARKDOWN} 
             onClick={copyAsMarkdown} 
-            className={styles.toolbarButton} 
-            title="Markdownとしてコピー"
-          >
-            Markdownコピー
-          </button>
-          <button 
+            title="Markdownとしてコピー" 
+          />
+          <IconButton 
+            iconType={IconType.SELECT_ALL} 
             onClick={selectAllCells} 
-            className={styles.toolbarButton} 
-            title="すべて選択 (Ctrl+A)"
-          >
-            すべて選択
-          </button>
-          <button 
+            title="すべて選択 (Ctrl+A)" 
+          />
+          <IconButton 
+            iconType={IconType.CLEAR_SELECTION} 
             onClick={clearSelection} 
-            className={styles.toolbarButton} 
-            disabled={!selection}
-            title="選択解除 (Esc)"
-          >
-            選択解除
-          </button>
+            disabled={!selection} 
+            title="選択解除 (Esc)" 
+          />
         </div>
 
-        <div className={styles.toolbarGroup}>
-          <button onClick={() => addRow()} className={styles.toolbarButton} title="行を追加">
-            行を追加
-          </button>
-          <button onClick={safeRemoveRow} className={styles.toolbarButton} disabled={data.length <= 1} title="行を削除">
-            行を削除
-          </button>
-          <button onClick={() => addColumn()} className={styles.toolbarButton} title="列を追加">
-            列を追加
-          </button>
-          <button onClick={safeRemoveColumn} className={styles.toolbarButton} disabled={data[0].length <= 1} title="列を削除">
-            列を削除
-          </button>
-        </div>
+        <div className={styles.toolbarDivider} />
 
         <div className={styles.toolbarGroup}>
-          <button 
+          <IconButton 
+            iconType={IconType.ADD_ROW} 
+            onClick={() => addRow()} 
+            title="行を追加" 
+          />
+          <IconButton 
+            iconType={IconType.REMOVE_ROW} 
+            onClick={safeRemoveRow} 
+            disabled={data.length <= 1} 
+            title="行を削除" 
+          />
+          <IconButton 
+            iconType={IconType.ADD_COLUMN} 
+            onClick={() => addColumn()} 
+            title="列を追加" 
+          />
+          <IconButton 
+            iconType={IconType.REMOVE_COLUMN} 
+            onClick={safeRemoveColumn} 
+            disabled={data[0].length <= 1} 
+            title="列を削除" 
+          />
+        </div>
+
+        <div className={styles.toolbarDivider} />
+
+        <div className={styles.toolbarGroup}>
+          <IconButton 
+            iconType={IconType.UNDO} 
             onClick={undoAction} 
-            className={styles.toolbarButton} 
-            disabled={!canUndo}
-            title="元に戻す (Ctrl+Z)"
-          >
-            ↩ 元に戻す
-          </button>
-          <button 
+            disabled={!canUndo} 
+            title="元に戻す (Ctrl+Z)" 
+          />
+          <IconButton 
+            iconType={IconType.REDO} 
             onClick={redoAction} 
-            className={styles.toolbarButton} 
-            disabled={!canRedo}
-            title="やり直し (Ctrl+Y)"
-          >
-            ↪ やり直し
-          </button>
+            disabled={!canRedo} 
+            title="やり直し (Ctrl+Y)" 
+          />
         </div>
 
+        <div className={styles.toolbarDivider} />
+
         <div className={styles.toolbarGroup}>
-          <button 
+          <IconButton 
+            iconType={IconType.UPDATE_WIDTH} 
             onClick={() => updateAllCellWidths()} 
-            className={styles.toolbarButton} 
-            title="幅を更新"
-          >
-            幅を更新
-          </button>
-          <button 
+            title="幅を更新" 
+          />
+          <IconButton 
+            iconType={IconType.SHORTCUT} 
             onClick={showShortcutHelp} 
-            className={styles.toolbarButton} 
-            title="ショートカット (Shift+?)"
-          >
-            ショートカット
-          </button>
+            title="ショートカット (Shift+?)" 
+          />
         </div>
       </div>
     )
