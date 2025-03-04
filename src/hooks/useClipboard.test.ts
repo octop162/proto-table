@@ -139,4 +139,114 @@ describe('useClipboard', () => {
     expect(mockUpdateCell).toHaveBeenCalledWith(2, 0, 'X3')
     expect(mockUpdateCell).toHaveBeenCalledWith(2, 1, 'Y3')
   })
+
+  it('pasteToSelectedCells: 横一列のデータを複数行にペーストできること', async () => {
+    // 横一列のデータをモック
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+        readText: vi.fn().mockResolvedValue('X1\tY1\tZ1')
+      },
+      configurable: true
+    })
+
+    const { result } = renderHook(() => useClipboard({
+      tableData: mockTableData,
+      selectedCells: {
+        start: { row: 0, col: 0 },
+        end: { row: 2, col: 0 }  // 3行1列の選択
+      },
+      currentCell: { row: 0, col: 0 },
+      updateCell: mockUpdateCell,
+      updateMultipleCells: mockUpdateMultipleCells
+    }))
+    
+    await result.current.pasteToSelectedCells()
+    
+    // 横一列のデータが3行にわたって繰り返しペーストされる
+    // 1行目
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'Y1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 2, 'Z1')
+    
+    // 2行目
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'Y1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 2, 'Z1')
+    
+    // 3行目
+    expect(mockUpdateCell).toHaveBeenCalledWith(2, 0, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(2, 1, 'Y1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(2, 2, 'Z1')
+  })
+
+  it('pasteToSelectedCells: 縦一列のデータを複数列にペーストできること', async () => {
+    // 縦一列のデータをモック
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+        readText: vi.fn().mockResolvedValue('X1\nX2\nX3')
+      },
+      configurable: true
+    })
+
+    const { result } = renderHook(() => useClipboard({
+      tableData: mockTableData,
+      selectedCells: {
+        start: { row: 0, col: 0 },
+        end: { row: 0, col: 2 }  // 1行3列の選択
+      },
+      currentCell: { row: 0, col: 0 },
+      updateCell: mockUpdateCell,
+      updateMultipleCells: mockUpdateMultipleCells
+    }))
+    
+    await result.current.pasteToSelectedCells()
+    
+    // 縦一列のデータが3列にわたって繰り返しペーストされる
+    // 1列目
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'X2')
+    expect(mockUpdateCell).toHaveBeenCalledWith(2, 0, 'X3')
+    
+    // 2列目
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'X2')
+    expect(mockUpdateCell).toHaveBeenCalledWith(2, 1, 'X3')
+    
+    // 3列目
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 2, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 2, 'X2')
+    expect(mockUpdateCell).toHaveBeenCalledWith(2, 2, 'X3')
+  })
+
+  it('pasteToSelectedCells: 選択範囲の開始位置からペーストされること', async () => {
+    // 通常のデータをモック
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+        readText: vi.fn().mockResolvedValue('X1\tY1\nX2\tY2')
+      },
+      configurable: true
+    })
+
+    const { result } = renderHook(() => useClipboard({
+      tableData: mockTableData,
+      selectedCells: {
+        start: { row: 1, col: 1 },  // 選択範囲の開始位置は(1,1)
+        end: { row: 2, col: 2 }
+      },
+      currentCell: { row: 2, col: 2 },  // カーソル位置は(2,2)
+      updateCell: mockUpdateCell,
+      updateMultipleCells: mockUpdateMultipleCells
+    }))
+    
+    await result.current.pasteToSelectedCells()
+    
+    // 選択範囲の開始位置(1,1)からペーストされる
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 2, 'Y1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(2, 1, 'X2')
+    expect(mockUpdateCell).toHaveBeenCalledWith(2, 2, 'Y2')
+  })
 }) 
