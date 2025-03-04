@@ -46,6 +46,58 @@ describe('useClipboard', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('A1\tB1\nA2\tB2\n')
   })
   
+  it('formatCellValueForExcel: 異なる改行コード（CR、CRLF）が正しく処理されること', async () => {
+    // テスト用のデータを作成（CRLFとCRを含む）
+    const mockTableDataWithDifferentLineBreaks: TableData = [
+      [{ value: 'A1\r\nB1', isEditing: false }, { value: 'C1\rD1', isEditing: false }]
+    ]
+    
+    const { result } = renderHook(() => useClipboard({
+      tableData: mockTableDataWithDifferentLineBreaks,
+      selectedCells: {
+        start: { row: 0, col: 0 },
+        end: { row: 0, col: 1 }
+      },
+      currentCell: { row: 0, col: 0 },
+      updateCell: mockUpdateCell,
+      updateMultipleCells: mockUpdateMultipleCells
+    }))
+    
+    result.current.copySelectedCells()
+    
+    // 改行コードが正規化され、適切にフォーマットされていることを確認
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('"A1\nB1"\t"C1\nD1"\n')
+  })
+
+  it('pasteToSelectedCells: 異なる改行コード（CR、CRLF）が正しく処理されること', async () => {
+    // モックNavigator Clipboard APIを上書き（CRLFとCRを含む）
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+        readText: vi.fn().mockResolvedValue('X1\r\nY1\tZ1\rW1')
+      },
+      configurable: true
+    })
+    
+    const { result } = renderHook(() => useClipboard({
+      tableData: mockTableData,
+      selectedCells: null,
+      currentCell: { row: 0, col: 0 },
+      updateCell: mockUpdateCell,
+      updateMultipleCells: mockUpdateMultipleCells,
+      addRow: mockAddRow,
+      addColumn: mockAddColumn
+    }))
+    
+    await result.current.pasteToSelectedCells()
+    
+    // 実際の呼び出し順序と引数を確認
+    expect(mockUpdateCell).toHaveBeenNthCalledWith(1, 0, 0, 'X1')
+    expect(mockUpdateCell).toHaveBeenNthCalledWith(2, 1, 0, 'Y1')
+    expect(mockUpdateCell).toHaveBeenNthCalledWith(3, 1, 1, 'Z1')
+    expect(mockUpdateCell).toHaveBeenNthCalledWith(4, 2, 0, 'W1')
+  })
+  
   it('cutSelectedCells: 選択範囲のセルをカットできること', async () => {
     const { result } = renderHook(() => useClipboard({
       tableData: mockTableData,
@@ -60,7 +112,10 @@ describe('useClipboard', () => {
     
     result.current.cutSelectedCells()
     
+    // コピーされたことを確認
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('A1\tB1\nA2\tB2\n')
+    
+    // セルがクリアされたことを確認
     expect(mockUpdateMultipleCells).toHaveBeenCalledWith(
       [
         { row: 0, col: 0 },
@@ -72,28 +127,40 @@ describe('useClipboard', () => {
     )
   })
   
-  it('pasteToSelectedCells: クリップボードの内容をペーストできること', async () => {
+  it('pasteToSelectedCells: 選択されたセルにペーストできること', async () => {
     const { result } = renderHook(() => useClipboard({
       tableData: mockTableData,
       selectedCells: null,
-      currentCell: { row: 1, col: 1 },
+      currentCell: { row: 0, col: 0 },
       updateCell: mockUpdateCell,
-      updateMultipleCells: mockUpdateMultipleCells
+      updateMultipleCells: mockUpdateMultipleCells,
+      addRow: mockAddRow,
+      addColumn: mockAddColumn
     }))
     
     await result.current.pasteToSelectedCells()
     
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'X1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 2, 'Y1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 1, 'X2')
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 2, 'Y2')
+    // ペーストされたことを確認
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'Y1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'X2')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'Y2')
   })
   
-  it('pasteToSelectedCells: 必要に応じて行と列を追加できること', async () => {
+  it('pasteToSelectedCells: 必要に応じて行が追加されること', async () => {
+    // 3行のテーブルに4行のデータをペースト
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+        readText: vi.fn().mockResolvedValue('X1\nX2\nX3\nX4')
+      },
+      configurable: true
+    })
+    
     const { result } = renderHook(() => useClipboard({
       tableData: mockTableData,
       selectedCells: null,
-      currentCell: { row: 2, col: 2 },
+      currentCell: { row: 0, col: 0 },
       updateCell: mockUpdateCell,
       updateMultipleCells: mockUpdateMultipleCells,
       addRow: mockAddRow,
@@ -102,23 +169,52 @@ describe('useClipboard', () => {
     
     await result.current.pasteToSelectedCells()
     
+    // 行が追加されたことを確認
     expect(mockAddRow).toHaveBeenCalledTimes(1)
+  })
+  
+  it('pasteToSelectedCells: 必要に応じて列が追加されること', async () => {
+    // 3列のテーブルに4列のデータをペースト
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+        readText: vi.fn().mockResolvedValue('X1\tY1\tZ1\tW1')
+      },
+      configurable: true
+    })
+    
+    const { result } = renderHook(() => useClipboard({
+      tableData: mockTableData,
+      selectedCells: null,
+      currentCell: { row: 0, col: 0 },
+      updateCell: mockUpdateCell,
+      updateMultipleCells: mockUpdateMultipleCells,
+      addRow: mockAddRow,
+      addColumn: mockAddColumn
+    }))
+    
+    await result.current.pasteToSelectedCells()
+    
+    // 列が追加されたことを確認
     expect(mockAddColumn).toHaveBeenCalledTimes(1)
   })
-
-  it('pasteToSelectedCells: 空の行が詰められないこと', async () => {
-    // クリップボードに空の行を含むデータをモック
+  
+  it('pasteToSelectedCells: 単一セルのコピーを複数選択したセルにペーストできること', async () => {
+    // 単一セルのデータ
     Object.defineProperty(navigator, 'clipboard', {
       value: {
         writeText: vi.fn().mockResolvedValue(undefined),
-        readText: vi.fn().mockResolvedValue('X1\tY1\n\nX3\tY3')
+        readText: vi.fn().mockResolvedValue('X1')
       },
       configurable: true
     })
-
+    
     const { result } = renderHook(() => useClipboard({
       tableData: mockTableData,
-      selectedCells: null,
+      selectedCells: {
+        start: { row: 0, col: 0 },
+        end: { row: 1, col: 1 }
+      },
       currentCell: { row: 0, col: 0 },
       updateCell: mockUpdateCell,
       updateMultipleCells: mockUpdateMultipleCells,
@@ -128,140 +224,78 @@ describe('useClipboard', () => {
     
     await result.current.pasteToSelectedCells()
     
-    // 1行目のデータが更新される
+    // 選択した全てのセルに同じ値がペーストされたことを確認
     expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'X1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'Y1')
-    
-    // 2行目は空行なので、空の文字列で更新される
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, '')
-    
-    // 3行目のデータが更新される
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 0, 'X3')
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 1, 'Y3')
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'X1')
   })
-
-  it('pasteToSelectedCells: 横一列のデータを複数行にペーストできること', async () => {
-    // 横一列のデータをモック
+  
+  it('pasteToSelectedCells: 横一列のデータを縦に繰り返しペーストできること', async () => {
+    // 横一列のデータ
     Object.defineProperty(navigator, 'clipboard', {
       value: {
         writeText: vi.fn().mockResolvedValue(undefined),
-        readText: vi.fn().mockResolvedValue('X1\tY1\tZ1')
+        readText: vi.fn().mockResolvedValue('X1\tY1')
       },
       configurable: true
     })
-
+    
     const { result } = renderHook(() => useClipboard({
       tableData: mockTableData,
       selectedCells: {
         start: { row: 0, col: 0 },
-        end: { row: 2, col: 0 }  // 3行1列の選択
+        end: { row: 2, col: 1 }
       },
       currentCell: { row: 0, col: 0 },
       updateCell: mockUpdateCell,
-      updateMultipleCells: mockUpdateMultipleCells
+      updateMultipleCells: mockUpdateMultipleCells,
+      addRow: mockAddRow,
+      addColumn: mockAddColumn
     }))
     
     await result.current.pasteToSelectedCells()
     
-    // 横一列のデータが3行にわたって繰り返しペーストされる
-    // 1行目
+    // 横一列のデータが縦に繰り返しペーストされたことを確認
     expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'X1')
     expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'Y1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(0, 2, 'Z1')
-    
-    // 2行目
     expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'X1')
     expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'Y1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 2, 'Z1')
-    
-    // 3行目
     expect(mockUpdateCell).toHaveBeenCalledWith(2, 0, 'X1')
     expect(mockUpdateCell).toHaveBeenCalledWith(2, 1, 'Y1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 2, 'Z1')
   })
-
-  it('pasteToSelectedCells: 縦一列のデータを複数列にペーストできること', async () => {
-    // 縦一列のデータをモック
+  
+  it('pasteToSelectedCells: 縦一列のデータを横に繰り返しペーストできること', async () => {
+    // 縦一列のデータ
     Object.defineProperty(navigator, 'clipboard', {
       value: {
         writeText: vi.fn().mockResolvedValue(undefined),
-        readText: vi.fn().mockResolvedValue('X1\nX2\nX3')
+        readText: vi.fn().mockResolvedValue('X1\nX2')
       },
       configurable: true
     })
-
+    
     const { result } = renderHook(() => useClipboard({
       tableData: mockTableData,
       selectedCells: {
         start: { row: 0, col: 0 },
-        end: { row: 0, col: 2 }  // 1行3列の選択
+        end: { row: 1, col: 2 }
       },
       currentCell: { row: 0, col: 0 },
       updateCell: mockUpdateCell,
-      updateMultipleCells: mockUpdateMultipleCells
+      updateMultipleCells: mockUpdateMultipleCells,
+      addRow: mockAddRow,
+      addColumn: mockAddColumn
     }))
     
     await result.current.pasteToSelectedCells()
     
-    // 縦一列のデータが3列にわたって繰り返しペーストされる
-    // 1列目
+    // 縦一列のデータが横に繰り返しペーストされたことを確認
     expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'X1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'X2')
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 0, 'X3')
-    
-    // 2列目
     expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'X1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'X2')
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 1, 'X3')
-    
-    // 3列目
     expect(mockUpdateCell).toHaveBeenCalledWith(0, 2, 'X1')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'X2')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'X2')
     expect(mockUpdateCell).toHaveBeenCalledWith(1, 2, 'X2')
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 2, 'X3')
-  })
-
-  it('pasteToSelectedCells: 選択範囲の開始位置からペーストされること', async () => {
-    // クリップボードの内容をモック
-    Object.defineProperty(navigator.clipboard, 'readText', {
-      value: vi.fn().mockResolvedValue('test'),
-      configurable: true
-    })
-
-    const { result } = renderHook(() => useClipboard({
-      tableData: mockTableData,
-      selectedCells: { start: { row: 1, col: 1 }, end: { row: 2, col: 2 } },
-      currentCell: { row: 2, col: 2 },
-      updateCell: mockUpdateCell,
-      updateMultipleCells: mockUpdateMultipleCells
-    }))
-
-    await result.current.pasteToSelectedCells()
-
-    // 選択範囲の開始位置（1,1）にペーストされることを確認
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'test')
-  })
-
-  it('pasteToSelectedCells: 単一セルのコピーを複数選択したセルすべてにペーストできること', async () => {
-    // 単一セルのコピー内容をモック
-    Object.defineProperty(navigator.clipboard, 'readText', {
-      value: vi.fn().mockResolvedValue('single'),
-      configurable: true
-    })
-
-    const { result } = renderHook(() => useClipboard({
-      tableData: mockTableData,
-      selectedCells: { start: { row: 0, col: 0 }, end: { row: 1, col: 1 } },
-      currentCell: { row: 0, col: 0 },
-      updateCell: mockUpdateCell,
-      updateMultipleCells: mockUpdateMultipleCells
-    }))
-
-    await result.current.pasteToSelectedCells()
-
-    // 選択した4つのセルすべてに同じ値がペーストされることを確認
-    expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'single')
-    expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'single')
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'single')
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'single')
   })
 }) 

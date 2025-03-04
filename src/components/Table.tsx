@@ -72,24 +72,6 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     setIsShortcutHelpOpen(true)
   }
 
-  // Markdownとしてクリップボードにコピー
-  const copyAsMarkdown = useCallback(() => {
-    if (!data || data.length === 0) return
-    
-    const markdown = convertToMarkdown(data)
-    navigator.clipboard.writeText(markdown)
-      .then(() => {
-        setMarkdownCopied(true)
-        setTimeout(() => setMarkdownCopied(false), 2000)
-      })
-      .catch(err => {
-        console.error('Markdownのコピーに失敗しました:', err)
-      })
-  }, [data])
-
-  // 初期状態ではisEditingはfalse
-  const isEditingRef = useRef(false)
-  
   // クリップボード操作の管理
   const { 
     copySelectedCells, 
@@ -142,6 +124,21 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     // 列を削除
     removeColumn()
   }
+
+  // Markdownとしてクリップボードにコピー
+  const copyAsMarkdown = useCallback(() => {
+    if (!data || data.length === 0) return
+    
+    // 常に全体をコピー
+    const markdown = convertToMarkdown(data)
+    navigator.clipboard.writeText(markdown)
+    
+    setMarkdownCopied(true)
+    setTimeout(() => setMarkdownCopied(false), 2000)
+  }, [data])
+
+  // 初期状態ではisEditingはfalse
+  const isEditingRef = useRef(false)
   
   // キーボードイベントの管理（初期設定）
   const { getPendingKey, updateHandlers } = useKeyboardEvents(data, {

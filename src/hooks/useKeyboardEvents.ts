@@ -72,6 +72,11 @@ export const useKeyboardEvents = (
           return
         }
 
+        // Alt+Enterは編集モードのままセル内で改行を挿入するため、ここでは何もしない
+        if (e.key === 'Enter' && e.altKey) {
+          return
+        }
+
         // Enterキーで編集確定
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault()

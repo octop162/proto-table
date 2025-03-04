@@ -45,6 +45,92 @@ export const useClipboard = ({
   }, [selectedCells])
 
   /**
+   * セルの値をExcel形式でフォーマット
+   * 改行を含む場合や"を含む場合は特別な処理を行う
+   */
+  const formatCellValueForExcel = useCallback((value: string): string => {
+    // 空の場合はそのまま返す
+    if (!value) return value;
+    
+    // 改行コードを正規化（CRLF -> LF）
+    let normalizedValue = value.replace(/\r\n/g, '\n');
+    // CR -> LF
+    normalizedValue = normalizedValue.replace(/\r/g, '\n');
+    
+    // 末尾の改行を削除
+    const trimmedValue = normalizedValue.endsWith('\n') ? normalizedValue.slice(0, -1) : normalizedValue;
+    
+    // 改行または"を含む場合は特別な処理が必要
+    const needsQuotes = trimmedValue.includes('\n') || trimmedValue.includes('"') || trimmedValue.includes('\t');
+    
+    if (needsQuotes) {
+      // "をエスケープ（""に変換）
+      const escapedValue = trimmedValue.replace(/"/g, '""');
+      // 値を"で囲む
+      return `"${escapedValue}"`;
+    }
+    
+    return trimmedValue;
+  }, []);
+
+  /**
+   * Excel形式のセル値をパース
+   */
+  const parseCellValueFromExcel = useCallback((value: string): string => {
+    // 空の場合はそのまま返す
+    if (!value) return value;
+    
+    // "で始まり"で終わる場合
+    if (value.startsWith('"') && value.endsWith('"') && value.length >= 2) {
+      // 前後の"を削除
+      const content = value.slice(1, -1);
+      // ""を"に戻す
+      const unescaped = content.replace(/""/g, '"');
+      
+      // 改行コードを正規化（CRLF -> LF）
+      return unescaped.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    }
+    
+    // 改行コードを正規化（CRLF -> LF）
+    return value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  }, []);
+
+  /**
+   * Excel形式の行データをパース
+   */
+  const parseExcelRow = useCallback((row: string): string[] => {
+    const fields = [];
+    let currentField = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      
+      if (char === '"') {
+        // 次の文字も"の場合はエスケープされた"
+        if (i + 1 < row.length && row[i + 1] === '"') {
+          currentField += '"';
+          i++; // 次の"をスキップ
+        } else {
+          // 引用符の開始または終了
+          inQuotes = !inQuotes;
+        }
+      } else if (char === '\t' && !inQuotes) {
+        // 引用符の外側のタブは区切り文字
+        fields.push(parseCellValueFromExcel(currentField));
+        currentField = '';
+      } else {
+        // 通常の文字
+        currentField += char;
+      }
+    }
+    
+    // 最後のフィールドを追加
+    fields.push(parseCellValueFromExcel(currentField));
+    return fields;
+  }, [parseCellValueFromExcel]);
+
+  /**
    * 選択されたセルをコピー
    */
   const copySelectedCells = useCallback(() => {
@@ -59,13 +145,15 @@ export const useClipboard = ({
     for (let row = minRow; row <= maxRow; row++) {
       const rowData = []
       for (let col = minCol; col <= maxCol; col++) {
-        rowData.push(tableData[row][col].value)
+        // セルの値をExcel形式でフォーマット
+        const formattedValue = formatCellValueForExcel(tableData[row][col].value);
+        rowData.push(formattedValue);
       }
       text += rowData.join('\t') + '\n'
     }
 
     navigator.clipboard.writeText(text)
-  }, [selectedCells, tableData])
+  }, [selectedCells, tableData, formatCellValueForExcel])
 
   /**
    * 選択されたセルをカット
@@ -89,14 +177,22 @@ export const useClipboard = ({
 
     try {
       const text = await navigator.clipboard.readText()
+      
+      // 改行コードを正規化（CRLF -> LF）
+      const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      
       // 末尾の改行を除去しつつ、空の行も保持する
-      const rows = text.endsWith('\n') 
-        ? text.slice(0, -1).split('\n') 
-        : text.split('\n');
+      const rows = normalizedText.endsWith('\n') 
+        ? normalizedText.slice(0, -1).split('\n') 
+        : normalizedText.split('\n');
       
       // クリップボードデータの行数と列数を取得
       const clipboardRowCount = rows.length;
-      const clipboardColCount = Math.max(...rows.map(row => row.split('\t').length));
+      
+      // Excel形式のセル値を考慮して列数を計算
+      const clipboardColCount = Math.max(...rows.map(row => {
+        return parseExcelRow(row).length;
+      }));
       
       // クリップボードデータが横一列または縦一列かどうかを判定
       const isSingleRow = clipboardRowCount === 1 && clipboardColCount > 1;
@@ -178,7 +274,8 @@ export const useClipboard = ({
       if (needsRepeatedPaste) {
         if (isSingleCell && selectedCells) {
           // 単一セルのコピーを複数選択したセルすべてにペースト
-          const cellValue = rows[0].split('\t')[0];
+          // Excel形式のセル値をパース
+          const cellValue = parseExcelRow(rows[0])[0];
           const positions = getSelectedCellPositions();
           
           // 選択したすべてのセルに同じ値をペースト
@@ -190,7 +287,8 @@ export const useClipboard = ({
           });
         } else if (isSingleRow) {
           // 横一列のデータを縦に繰り返す場合
-          const cells = rows[0].split('\t');
+          // Excel形式のセル値をパース
+          const cells = parseExcelRow(rows[0]);
           
           for (let rowOffset = 0; rowOffset < selectionRowCount; rowOffset++) {
             cells.forEach((cellValue, colOffset) => {
@@ -206,7 +304,8 @@ export const useClipboard = ({
         } else if (isSingleColumn) {
           // 縦一列のデータを横に繰り返す場合
           for (let rowOffset = 0; rowOffset < clipboardRowCount; rowOffset++) {
-            const cellValue = rows[rowOffset].split('\t')[0];
+            // Excel形式のセル値をパース
+            const cellValue = parseExcelRow(rows[rowOffset])[0];
             
             for (let colOffset = 0; colOffset < selectionColCount; colOffset++) {
               const targetRow = startRow + rowOffset;
@@ -222,7 +321,8 @@ export const useClipboard = ({
       } else {
         // 通常のペースト
         rows.forEach((row, rowOffset) => {
-          const cells = row.split('\t');
+          // Excel形式のセル値をパース
+          const cells = parseExcelRow(row);
           cells.forEach((cellValue, colOffset) => {
             const targetRow = startRow + rowOffset;
             const targetCol = startCol + colOffset;
@@ -237,7 +337,7 @@ export const useClipboard = ({
     } catch (err) {
       console.error('クリップボードからの読み取りに失敗しました:', err);
     }
-  }, [currentCell, tableData, updateCell, addRow, addColumn, selectedCells]);
+  }, [currentCell, tableData, updateCell, addRow, addColumn, selectedCells, parseCellValueFromExcel, parseExcelRow, getSelectedCellPositions]);
 
   return {
     copySelectedCells,

@@ -66,6 +66,10 @@ export const ShortcutHelp: React.FC<ShortcutHelpProps> = ({ isOpen, onClose }) =
                 <td>編集確定</td>
               </tr>
               <tr>
+                <td>Alt+Enter (編集中)</td>
+                <td>セル内で改行</td>
+              </tr>
+              <tr>
                 <td>矢印キー</td>
                 <td>セル移動</td>
               </tr>

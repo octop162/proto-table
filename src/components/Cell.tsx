@@ -8,7 +8,7 @@ type CellProps = {
   width?: number
   onEdit: (value: string) => void
   onSelect: () => void
-  onKeyDown?: (e: KeyboardEvent<HTMLInputElement | HTMLDivElement>) => void
+  onKeyDown?: (e: KeyboardEvent<HTMLInputElement | HTMLDivElement | HTMLTextAreaElement>) => void
   onCompositionStart?: () => void
   onCompositionEnd?: () => void
   onDoubleClick?: () => void
@@ -34,7 +34,7 @@ export const Cell: FC<CellProps> = ({
   onMouseEnter,
   onMouseUp
 }) => {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const [inputValue, setInputValue] = useState(value || '')
   const [prevIsEditing, setPrevIsEditing] = useState(isEditing)
   const [prevValue, setPrevValue] = useState(value)
@@ -91,7 +91,7 @@ export const Cell: FC<CellProps> = ({
   }, [isEditing, prevIsEditing, hasUserEdited, onEdit])
 
   // 入力値の変更を処理
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value
     setInputValue(newValue)
     inputValueRef.current = newValue
@@ -108,10 +108,17 @@ export const Cell: FC<CellProps> = ({
   const handleBlur = () => {
     // 編集中の場合のみ処理
     if (isEditing && hasUserEdited) {
+      // 末尾の改行を削除
+      const trimmedValue = inputValueRef.current.endsWith('\n') 
+        ? inputValueRef.current.slice(0, -1) 
+        : inputValueRef.current;
+      
       // 確実に最新の値を親に通知
-      if (inputValueRef.current !== lastNotifiedValueRef.current) {
-        onEdit(inputValueRef.current)
-        lastNotifiedValueRef.current = inputValueRef.current
+      if (trimmedValue !== lastNotifiedValueRef.current) {
+        onEdit(trimmedValue)
+        lastNotifiedValueRef.current = trimmedValue
+        inputValueRef.current = trimmedValue
+        setInputValue(trimmedValue)
       }
     }
   }
@@ -175,19 +182,70 @@ export const Cell: FC<CellProps> = ({
     
     // IME入力完了時に親コンポーネントに通知
     if (hasUserEdited && inputValueRef.current !== lastNotifiedValueRef.current) {
-      onEdit(inputValueRef.current)
-      lastNotifiedValueRef.current = inputValueRef.current
+      // 末尾の改行を削除
+      const trimmedValue = inputValueRef.current.endsWith('\n') 
+        ? inputValueRef.current.slice(0, -1) 
+        : inputValueRef.current;
+      
+      onEdit(trimmedValue)
+      lastNotifiedValueRef.current = trimmedValue
+      inputValueRef.current = trimmedValue
+      setInputValue(trimmedValue)
     }
   }
 
   // キーダウン時の処理
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Alt+Enterで改行を挿入
+    if (e.key === 'Enter' && e.altKey) {
+      e.preventDefault();
+      
+      // 現在のカーソル位置を取得
+      const cursorPosition = e.currentTarget.selectionStart ?? 0;
+      const cursorEnd = e.currentTarget.selectionEnd ?? cursorPosition;
+      
+      // 改行を挿入した新しい値を作成
+      const newValue = 
+        inputValue.substring(0, cursorPosition) + 
+        '\n' + 
+        inputValue.substring(cursorEnd);
+      
+      // 入力値を更新
+      setInputValue(newValue);
+      inputValueRef.current = newValue;
+      setHasUserEdited(true);
+      
+      // 親コンポーネントに通知
+      if (!isComposingRef.current) {
+        onEdit(newValue);
+        lastNotifiedValueRef.current = newValue;
+      }
+      
+      // カーソル位置を改行の後に設定（非同期で実行）
+      setTimeout(() => {
+        if (inputRef.current) {
+          const newPosition = cursorPosition + 1;
+          inputRef.current.selectionStart = newPosition;
+          inputRef.current.selectionEnd = newPosition;
+        }
+      }, 0);
+      
+      return;
+    }
+    
     // Enter または Tab キーが押された場合、現在の入力値を親コンポーネントに通知
-    if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
+    if ((e.key === 'Enter' && !e.shiftKey && !e.altKey) || e.key === 'Tab') {
       // 現在の入力値を確実に親コンポーネントに通知
       if (hasUserEdited && inputValueRef.current !== lastNotifiedValueRef.current) {
-        onEdit(inputValueRef.current)
-        lastNotifiedValueRef.current = inputValueRef.current
+        // 末尾の改行を削除
+        const trimmedValue = inputValueRef.current.endsWith('\n') 
+          ? inputValueRef.current.slice(0, -1) 
+          : inputValueRef.current;
+        
+        onEdit(trimmedValue)
+        lastNotifiedValueRef.current = trimmedValue
+        inputValueRef.current = trimmedValue
+        setInputValue(trimmedValue)
       }
     }
     
@@ -208,17 +266,17 @@ export const Cell: FC<CellProps> = ({
       style={cellStyle}
     >
       {isEditing ? (
-        <input
+        <textarea
           ref={inputRef}
-          type="text"
           value={inputValue}
           onChange={handleChange}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           onCompositionStart={handleCompositionStart}
           onCompositionEnd={handleCompositionEnd}
-          className={styles.cellInput}
+          className={`${styles.cellInput} ${styles.editing}`}
           autoFocus
+          rows={Math.max(1, inputValue.split('\n').length)}
         />
       ) : (
         <div className={styles.cellContent}>

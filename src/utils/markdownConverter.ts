@@ -1,34 +1,43 @@
 import { TableData, CellValue } from '../types/table'
 
 /**
- * テーブルデータをMarkdown形式に変換する
+ * テーブルデータをMarkdown形式に変換
  * @param data テーブルデータ
  * @returns Markdown形式の文字列
  */
 export const convertToMarkdown = (data: TableData): string => {
   if (!data.length || !data[0].length) return ''
 
-  // ヘッダー行の作成
-  const headers = data[0].map((_, index) => String.fromCharCode(65 + index))
+  // 一番上の行をヘッダーとして使用
+  const headerRow = data[0].map(cell => formatCellValue(cell.value))
   
-  // 各列の最大幅を計算
-  const columnWidths = calculateColumnWidths(data, headers)
+  // 1行だけの場合は区切り行を追加しない
+  if (data.length === 1) {
+    return '| ' + headerRow.join(' | ') + ' |'
+  }
   
   // ヘッダー行
-  let markdown = '| ' + headers.map((header, i) => 
-    padString(header, columnWidths[i])).join(' | ') + ' |\n'
+  let markdown = '| ' + headerRow.join(' | ') + ' |\n'
   
   // 区切り行
-  markdown += '|' + columnWidths.map(width => 
-    '-'.repeat(width + 2)).join('|') + '|\n'
+  markdown += '|' + headerRow.map(() => '---').join('|') + '|\n'
   
-  // データ行
-  data.forEach(row => {
-    markdown += '| ' + row.map((cell, colIndex) => 
-      padString(formatCellValue(cell.value), columnWidths[colIndex])).join(' | ') + ' |\n'
-  })
+  // データ行（ヘッダー行を除く）
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i]
+    markdown += '| ' + row.map(cell => {
+      // セル内の改行を<br>タグに変換し、数値を文字列に変換
+      const value = formatCellValue(cell.value)
+      return value
+    }).join(' | ') + ' |'
+    
+    // 最後の行でなければ改行を追加
+    if (i < data.length - 1) {
+      markdown += '\n'
+    }
+  }
   
-  return markdown.trim()
+  return markdown
 }
 
 /**
@@ -37,37 +46,23 @@ export const convertToMarkdown = (data: TableData): string => {
  * @returns 整形された値
  */
 const formatCellValue = (value: CellValue): string => {
-  if (typeof value === 'number') return value.toString()
-  return value.replace(/\n/g, '<br>')
-}
-
-/**
- * 各列の最大幅を計算する
- * @param data テーブルデータ
- * @param headers ヘッダー行
- * @returns 各列の最大幅の配列
- */
-const calculateColumnWidths = (data: TableData, headers: string[]): number[] => {
-  const widths: number[] = headers.map(h => h.length)
+  // 数値の場合は文字列に変換
+  if (typeof value === 'number') return String(value)
   
-  data.forEach(row => {
-    row.forEach((cell, colIndex) => {
-      const cellValue = formatCellValue(cell.value)
-      if (colIndex < widths.length && cellValue.length > widths[colIndex]) {
-        widths[colIndex] = cellValue.length
-      }
-    })
-  })
+  // 文字列の場合は改行を<br>に変換し、末尾の改行を削除
+  if (!value) return ''
   
-  return widths
-}
-
-/**
- * 文字列を指定の長さになるようにパディングする
- * @param str 文字列
- * @param length 目標の長さ
- * @returns パディングされた文字列
- */
-const padString = (str: string, length: number): string => {
-  return str + ' '.repeat(Math.max(0, length - str.length))
+  // 改行コードを正規化（CRLF -> LF）
+  let normalizedValue = String(value).replace(/\r\n/g, '\n');
+  // CR -> LF
+  normalizedValue = normalizedValue.replace(/\r/g, '\n');
+  
+  // 末尾の改行を削除（複数の改行も対応）
+  let trimmedValue = normalizedValue;
+  while (trimmedValue.endsWith('\n')) {
+    trimmedValue = trimmedValue.slice(0, -1);
+  }
+  
+  // 改行を<br>に変換
+  return trimmedValue.replace(/\n/g, '<br>')
 } 
