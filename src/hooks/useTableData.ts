@@ -100,6 +100,7 @@ export const useTableData = (initialData: TableData) => {
    * 行を追加
    */
   const addRow = useCallback(() => {
+    console.log('addRow');
     // 最後の行のセル幅を取得
     const lastRowWidths = data.length > 0 
       ? data[0].map(cell => cell.width || 80)
@@ -119,6 +120,7 @@ export const useTableData = (initialData: TableData) => {
    * 列を追加
    */
   const addColumn = useCallback(() => {
+    console.log('addColumn');
     const newData = data.map(row => [
       ...row,
       {

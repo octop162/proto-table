@@ -101,6 +101,8 @@ export const useClipboard = ({
       // クリップボードデータが横一列または縦一列かどうかを判定
       const isSingleRow = clipboardRowCount === 1 && clipboardColCount > 1;
       const isSingleColumn = clipboardColCount === 1 && clipboardRowCount > 1;
+      // 単一セルのコピーかどうかを判定
+      const isSingleCell = clipboardRowCount === 1 && clipboardColCount === 1;
       
       // 選択範囲の情報を取得
       let selectionRowCount = 1;
@@ -125,7 +127,8 @@ export const useClipboard = ({
       // 連続ペーストが必要かどうかを判定
       const needsRepeatedPaste = selectedCells && 
         ((isSingleRow && selectionRowCount > 1) || 
-         (isSingleColumn && selectionColCount > 1));
+         (isSingleColumn && selectionColCount > 1) ||
+         (isSingleCell && (selectionRowCount > 1 || selectionColCount > 1)));
       
       // 必要に応じて行を追加
       let rowsToAdd = 0;
@@ -170,10 +173,22 @@ export const useClipboard = ({
           addColumn();
         }
       }
-      
+
       // データをペースト
       if (needsRepeatedPaste) {
-        if (isSingleRow) {
+        if (isSingleCell && selectedCells) {
+          // 単一セルのコピーを複数選択したセルすべてにペースト
+          const cellValue = rows[0].split('\t')[0];
+          const positions = getSelectedCellPositions();
+          
+          // 選択したすべてのセルに同じ値をペースト
+          positions.forEach(({ row, col }) => {
+            // テーブルの範囲内かチェック
+            if (row < tableData.length && col < tableData[0].length) {
+              updateCell(row, col, cellValue);
+            }
+          });
+        } else if (isSingleRow) {
           // 横一列のデータを縦に繰り返す場合
           const cells = rows[0].split('\t');
           

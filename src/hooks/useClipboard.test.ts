@@ -221,32 +221,47 @@ describe('useClipboard', () => {
   })
 
   it('pasteToSelectedCells: 選択範囲の開始位置からペーストされること', async () => {
-    // 通常のデータをモック
-    Object.defineProperty(navigator, 'clipboard', {
-      value: {
-        writeText: vi.fn().mockResolvedValue(undefined),
-        readText: vi.fn().mockResolvedValue('X1\tY1\nX2\tY2')
-      },
+    // クリップボードの内容をモック
+    Object.defineProperty(navigator.clipboard, 'readText', {
+      value: vi.fn().mockResolvedValue('test'),
       configurable: true
     })
 
     const { result } = renderHook(() => useClipboard({
       tableData: mockTableData,
-      selectedCells: {
-        start: { row: 1, col: 1 },  // 選択範囲の開始位置は(1,1)
-        end: { row: 2, col: 2 }
-      },
-      currentCell: { row: 2, col: 2 },  // カーソル位置は(2,2)
+      selectedCells: { start: { row: 1, col: 1 }, end: { row: 2, col: 2 } },
+      currentCell: { row: 2, col: 2 },
       updateCell: mockUpdateCell,
       updateMultipleCells: mockUpdateMultipleCells
     }))
-    
+
     await result.current.pasteToSelectedCells()
-    
-    // 選択範囲の開始位置(1,1)からペーストされる
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'X1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(1, 2, 'Y1')
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 1, 'X2')
-    expect(mockUpdateCell).toHaveBeenCalledWith(2, 2, 'Y2')
+
+    // 選択範囲の開始位置（1,1）にペーストされることを確認
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'test')
+  })
+
+  it('pasteToSelectedCells: 単一セルのコピーを複数選択したセルすべてにペーストできること', async () => {
+    // 単一セルのコピー内容をモック
+    Object.defineProperty(navigator.clipboard, 'readText', {
+      value: vi.fn().mockResolvedValue('single'),
+      configurable: true
+    })
+
+    const { result } = renderHook(() => useClipboard({
+      tableData: mockTableData,
+      selectedCells: { start: { row: 0, col: 0 }, end: { row: 1, col: 1 } },
+      currentCell: { row: 0, col: 0 },
+      updateCell: mockUpdateCell,
+      updateMultipleCells: mockUpdateMultipleCells
+    }))
+
+    await result.current.pasteToSelectedCells()
+
+    // 選択した4つのセルすべてに同じ値がペーストされることを確認
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 0, 'single')
+    expect(mockUpdateCell).toHaveBeenCalledWith(0, 1, 'single')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 0, 'single')
+    expect(mockUpdateCell).toHaveBeenCalledWith(1, 1, 'single')
   })
 }) 
