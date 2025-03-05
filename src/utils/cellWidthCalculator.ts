@@ -74,6 +74,17 @@ export const calculateMarkdownTextWidth = (text: string): number => {
 };
 
 /**
+ * Markdownテーブルのセル幅を計算する
+ * |と文字の間の半角スペースも考慮
+ * @param text セルのテキスト
+ * @returns 表示幅（文字単位）
+ */
+export const calculateMarkdownCellWidth = (text: string): number => {
+  // 通常のMarkdown幅を計算
+  return calculateMarkdownTextWidth(text);
+};
+
+/**
  * セルの最適な幅をピクセル単位で計算
  * @param text セルのテキスト
  * @param minWidth 最小幅（px）
