@@ -1,14 +1,15 @@
 import { useCallback } from 'react'
 import { TableData, Selection, Position } from '../types/table'
 
-type UseClipboardProps = {
+export type UseClipboardProps = {
   tableData: TableData
-  selectedCells: Selection | null
   currentCell: Position | null
-  updateCell: (row: number, col: number, value: string) => void
+  selectedCells: Selection | null
   updateMultipleCells: (positions: Position[], value: string) => void
-  addRow?: () => void
-  addColumn?: () => void
+  updateMultipleCellsWithDifferentValues: (updates: {position: Position, value: string}[]) => void
+  getSelectedCellPositions: () => Position[]
+  addMultipleRows: (count: number) => void
+  addMultipleColumns: (count: number) => void
 }
 
 /**
@@ -16,34 +17,14 @@ type UseClipboardProps = {
  */
 export const useClipboard = ({
   tableData,
-  selectedCells,
   currentCell,
-  updateCell,
+  selectedCells,
   updateMultipleCells,
-  addRow,
-  addColumn
+  updateMultipleCellsWithDifferentValues,
+  getSelectedCellPositions,
+  addMultipleRows,
+  addMultipleColumns,
 }: UseClipboardProps) => {
-  /**
-   * 選択されたセルの位置を取得
-   */
-  const getSelectedCellPositions = useCallback((): Position[] => {
-    if (!selectedCells) return []
-
-    const minRow = Math.min(selectedCells.start.row, selectedCells.end.row)
-    const maxRow = Math.max(selectedCells.start.row, selectedCells.end.row)
-    const minCol = Math.min(selectedCells.start.col, selectedCells.end.col)
-    const maxCol = Math.max(selectedCells.start.col, selectedCells.end.col)
-
-    const positions: Position[] = []
-    for (let row = minRow; row <= maxRow; row++) {
-      for (let col = minCol; col <= maxCol; col++) {
-        positions.push({ row, col })
-      }
-    }
-
-    return positions
-  }, [selectedCells])
-
   /**
    * セルの値をExcel形式でフォーマット
    * 改行を含む場合や"を含む場合は特別な処理を行う
@@ -225,49 +206,63 @@ export const useClipboard = ({
       
       // 必要に応じて行を追加
       let rowsToAdd = 0;
+      let maxTargetRow = 0;
       
       if (needsRepeatedPaste) {
         if (isSingleRow) {
           // 横一列のデータを縦に繰り返す場合
-          rowsToAdd = startRow + selectionRowCount - tableData.length;
+          maxTargetRow = startRow + selectionRowCount - 1;
         } else if (isSingleColumn) {
           // 縦一列のデータを横に繰り返す場合
-          rowsToAdd = startRow + clipboardRowCount - tableData.length;
+          maxTargetRow = startRow + clipboardRowCount - 1;
+        } else if (isSingleCell) {
+          // 単一セルのコピーを複数選択したセルにペースト
+          maxTargetRow = Math.max(...getSelectedCellPositions().map(pos => pos.row));
         }
       } else {
         // 通常のペースト
-        rowsToAdd = startRow + clipboardRowCount - tableData.length;
+        maxTargetRow = startRow + clipboardRowCount - 1;
       }
       
-      if (addRow && rowsToAdd > 0) {
-        for (let i = 0; i < rowsToAdd; i++) {
-          addRow();
+      // テーブルの行数が足りない場合は追加
+      if (maxTargetRow >= tableData.length) {
+        rowsToAdd = maxTargetRow - tableData.length + 1;
+        if (rowsToAdd > 0) {
+          addMultipleRows(rowsToAdd);
         }
       }
       
       // 必要に応じて列を追加
       let colsToAdd = 0;
+      let maxTargetCol = 0;
       
       if (needsRepeatedPaste) {
         if (isSingleRow) {
           // 横一列のデータを縦に繰り返す場合
-          colsToAdd = startCol + clipboardColCount - tableData[0].length;
+          maxTargetCol = startCol + clipboardColCount - 1;
         } else if (isSingleColumn) {
           // 縦一列のデータを横に繰り返す場合
-          colsToAdd = startCol + selectionColCount - tableData[0].length;
+          maxTargetCol = startCol + selectionColCount - 1;
+        } else if (isSingleCell) {
+          // 単一セルのコピーを複数選択したセルにペースト
+          maxTargetCol = Math.max(...getSelectedCellPositions().map(pos => pos.col));
         }
       } else {
         // 通常のペースト
-        colsToAdd = startCol + clipboardColCount - tableData[0].length;
+        maxTargetCol = startCol + clipboardColCount - 1;
       }
       
-      if (addColumn && colsToAdd > 0) {
-        for (let i = 0; i < colsToAdd; i++) {
-          addColumn();
+      // テーブルの列数が足りない場合は追加
+      if (maxTargetCol >= tableData[0].length) {
+        colsToAdd = maxTargetCol - tableData[0].length + 1;
+        if (colsToAdd > 0) {
+          addMultipleColumns(colsToAdd);
         }
       }
-
-      // データをペースト
+      
+      // ペーストするデータを準備
+      const updates: {position: Position, value: string}[] = [];
+      
       if (needsRepeatedPaste) {
         if (isSingleCell && selectedCells) {
           // 単一セルのコピーを複数選択したセルすべてにペースト
@@ -276,10 +271,10 @@ export const useClipboard = ({
           
           // 選択したすべてのセルに同じ値をペースト
           positions.forEach(({ row, col }) => {
-            // テーブルの範囲内かチェック
-            if (row < tableData.length && col < tableData[0].length) {
-              updateCell(row, col, cellValue);
-            }
+            updates.push({
+              position: { row, col },
+              value: cellValue
+            });
           });
         } else if (isSingleRow) {
           // 横一列のデータを縦に繰り返す場合
@@ -288,10 +283,10 @@ export const useClipboard = ({
               const targetRow = startRow + rowOffset;
               const targetCol = startCol + colOffset;
               
-              // テーブルの範囲内かチェック
-              if (targetRow < tableData.length && targetCol < tableData[0].length) {
-                updateCell(targetRow, targetCol, cellValue);
-              }
+              updates.push({
+                position: { row: targetRow, col: targetCol },
+                value: cellValue
+              });
             });
           }
         } else if (isSingleColumn) {
@@ -303,10 +298,10 @@ export const useClipboard = ({
               const targetRow = startRow + rowOffset;
               const targetCol = startCol + colOffset;
               
-              // テーブルの範囲内かチェック
-              if (targetRow < tableData.length && targetCol < tableData[0].length) {
-                updateCell(targetRow, targetCol, cellValue);
-              }
+              updates.push({
+                position: { row: targetRow, col: targetCol },
+                value: cellValue
+              });
             }
           }
         }
@@ -317,17 +312,22 @@ export const useClipboard = ({
             const targetRow = startRow + rowOffset;
             const targetCol = startCol + colOffset;
             
-            // テーブルの範囲内かチェック
-            if (targetRow < tableData.length && targetCol < tableData[0].length) {
-              updateCell(targetRow, targetCol, cellValue);
-            }
+            updates.push({
+              position: { row: targetRow, col: targetCol },
+              value: cellValue
+            });
           });
         });
+      }
+      
+      // 一度にすべてのセルを更新
+      if (updates.length > 0) {
+        updateMultipleCellsWithDifferentValues(updates);
       }
     } catch (err) {
       console.error('クリップボードからの読み取りに失敗しました:', err);
     }
-  }, [currentCell, tableData, updateCell, addRow, addColumn, selectedCells, parseCellValueFromExcel, getSelectedCellPositions]);
+  }, [currentCell, tableData, updateMultipleCellsWithDifferentValues, selectedCells, parseCellValueFromExcel, getSelectedCellPositions, addMultipleRows, addMultipleColumns]);
 
   return {
     copySelectedCells,

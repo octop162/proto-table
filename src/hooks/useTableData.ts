@@ -38,11 +38,15 @@ export const useTableData = (initialData: TableData) => {
    */
   const updateCell = useCallback((rowIndex: number, colIndex: number, value: CellData['value']) => {
     const newData = [...data]
-    newData[rowIndex][colIndex] = {
-      ...newData[rowIndex][colIndex],
-      value
+    // テーブルの範囲内かチェック
+    if (rowIndex >= 0 && rowIndex < newData.length && 
+        colIndex >= 0 && colIndex < newData[0].length) {
+      newData[rowIndex][colIndex] = {
+        ...newData[rowIndex][colIndex],
+        value
+      }
+      updateDataWithHistory(newData, HistoryActionType.CELL_UPDATE)
     }
-    updateDataWithHistory(newData, HistoryActionType.CELL_UPDATE)
   }, [data, updateDataWithHistory])
 
   /**
@@ -53,9 +57,69 @@ export const useTableData = (initialData: TableData) => {
   const updateMultipleCells = useCallback((positions: Position[], value: CellData['value']) => {
     const newData = [...data]
     positions.forEach(({ row, col }) => {
-      newData[row][col] = {
-        ...newData[row][col],
-        value
+      // テーブルの範囲内かチェック
+      if (row >= 0 && row < newData.length && 
+          col >= 0 && col < newData[0].length) {
+        newData[row][col] = {
+          ...newData[row][col],
+          value
+        }
+      }
+    })
+    updateDataWithHistory(newData, HistoryActionType.MULTIPLE_CELLS_UPDATE)
+  }, [data, updateDataWithHistory])
+
+  /**
+   * 複数のセルの値を更新（各セルに異なる値）
+   * @param updates 更新するセルの位置と値のペアの配列
+   */
+  const updateMultipleCellsWithDifferentValues = useCallback((updates: {position: Position, value: CellData['value']}[]) => {
+    const newData = [...data]
+
+    // 範囲外のpositionがあるかチェックし、必要に応じて行または列を追加
+    let maxRow = -1;
+    let maxCol = -1;
+
+    // 最大の行と列のインデックスを取得
+    updates.forEach(({ position }) => {
+      maxRow = Math.max(maxRow, position.row);
+      maxCol = Math.max(maxCol, position.col);
+    });
+    
+    // 行数が足りない場合は追加
+    if (maxRow >= newData.length) {
+      const rowsToAdd = maxRow - newData.length + 1;
+      for (let i = 0; i < rowsToAdd; i++) {
+        // 新しい行を追加（既存の列数と同じ幅で空のセルを作成）
+        const newRow = Array(newData[0].length).fill(0).map(() => ({
+          value: '',
+          isEditing: false
+        }));
+        newData.push(newRow);
+      }
+    }
+    
+    // 列数が足りない場合は追加
+    if (maxCol >= newData[0].length) {
+      const colsToAdd = maxCol - newData[0].length + 1;
+      for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
+        for (let i = 0; i < colsToAdd; i++) {
+          newData[rowIndex].push({
+            value: '',
+            isEditing: false
+          });
+        }
+      }
+    }
+
+    updates.forEach(({ position, value }) => {
+      // テーブルの範囲内かチェック
+      if (position.row >= 0 && position.row < newData.length && 
+          position.col >= 0 && position.col < newData[0].length) {
+        newData[position.row][position.col] = {
+          ...newData[position.row][position.col],
+          value
+        }
       }
     })
     updateDataWithHistory(newData, HistoryActionType.MULTIPLE_CELLS_UPDATE)
@@ -117,6 +181,30 @@ export const useTableData = (initialData: TableData) => {
   }, [data, updateDataWithHistory])
 
   /**
+   * 複数の行を一度に追加
+   * @param count 追加する行数
+   */
+  const addMultipleRows = useCallback((count: number) => {
+    if (count <= 0) return;
+    
+    // 最後の行のセル幅を取得
+    const lastRowWidths = data.length > 0 
+      ? data[0].map(cell => cell.width || 80)
+      : Array(data[0].length).fill(80)
+    
+    const newRows = Array(count).fill(null).map(() => 
+      Array(data[0].length).fill(null).map((_, index) => ({
+        value: '',
+        isEditing: false,
+        width: lastRowWidths[index] // 前の行と同じ幅を設定
+      }))
+    );
+    
+    const newData = [...data, ...newRows];
+    updateDataWithHistory(newData, HistoryActionType.ADD_ROW);
+  }, [data, updateDataWithHistory]);
+
+  /**
    * 列を追加
    */
   const addColumn = useCallback(() => {
@@ -132,6 +220,25 @@ export const useTableData = (initialData: TableData) => {
     
     updateDataWithHistory(newData, HistoryActionType.ADD_COLUMN)
   }, [data, updateDataWithHistory])
+
+  /**
+   * 複数の列を一度に追加
+   * @param count 追加する列数
+   */
+  const addMultipleColumns = useCallback((count: number) => {
+    if (count <= 0) return;
+    
+    const newData = data.map(row => [
+      ...row,
+      ...Array(count).fill(null).map(() => ({
+        value: '',
+        isEditing: false,
+        width: 80 // デフォルト幅
+      }))
+    ]);
+    
+    updateDataWithHistory(newData, HistoryActionType.ADD_COLUMN);
+  }, [data, updateDataWithHistory]);
 
   /**
    * 行を削除
@@ -236,10 +343,13 @@ export const useTableData = (initialData: TableData) => {
     data,
     updateCell,
     updateMultipleCells,
+    updateMultipleCellsWithDifferentValues,
     setCellWidth,
     updateAllCellWidths,
     addRow,
+    addMultipleRows,
     addColumn,
+    addMultipleColumns,
     removeRow,
     removeColumn,
     pasteData,

@@ -26,9 +26,12 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     data, 
     updateCell, 
     updateMultipleCells,
+    updateMultipleCellsWithDifferentValues,
     updateAllCellWidths,
     addRow, 
     addColumn, 
+    addMultipleRows,
+    addMultipleColumns,
     removeRow, 
     removeColumn,
     undoAction,
@@ -81,10 +84,11 @@ export const Table: FC<TableProps> = ({ initialData }) => {
     tableData: data, 
     selectedCells: selection, 
     currentCell,
-    updateCell, 
     updateMultipleCells,
-    addRow,
-    addColumn
+    updateMultipleCellsWithDifferentValues,
+    getSelectedCellPositions,
+    addMultipleRows,
+    addMultipleColumns
   })
 
   // 行を安全に削除（選択状態を考慮）
