@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculateTextWidth, calculateCellWidth, calculateColumnWidths } from './cellWidthCalculator'
+import { calculateTextWidth, calculateCellWidth, calculateColumnWidths, calculateMarkdownTextWidth } from './cellWidthCalculator'
 import { TableData } from '../types/table'
 
 describe('cellWidthCalculator', () => {
@@ -109,6 +109,60 @@ describe('cellWidthCalculator', () => {
       // 列1: 全角5文字 * 2 * 8px + 16px = 96px (既存の幅50pxは無視)
       // 列2: 半角3文字 * 8px + 16px = 40px < 最小幅80px (既存の幅200pxは無視)
       expect(result).toEqual([96, 80])
+    })
+  })
+
+  describe('calculateMarkdownTextWidth', () => {
+    it('空文字列の場合は0を返すこと', () => {
+      expect(calculateMarkdownTextWidth('')).toBe(0)
+      expect(calculateMarkdownTextWidth(null as unknown as string)).toBe(0)
+      expect(calculateMarkdownTextWidth(undefined as unknown as string)).toBe(0)
+    })
+
+    it('半角文字の幅が正しく計算されること', () => {
+      expect(calculateMarkdownTextWidth('abc')).toBe(3)
+      expect(calculateMarkdownTextWidth('123')).toBe(3)
+      expect(calculateMarkdownTextWidth('a1b2c3')).toBe(6)
+    })
+
+    it('全角文字の幅が正しく計算されること', () => {
+      expect(calculateMarkdownTextWidth('あいう')).toBe(6) // 全角は2倍
+      expect(calculateMarkdownTextWidth('ＡＢＣ')).toBe(6) // 全角英数も2倍
+      expect(calculateMarkdownTextWidth('あ1い2う')).toBe(8) // 全角と半角の混在
+    })
+
+    it('改行を含む文字列の幅が正しく計算されること（改行は<br>として4文字扱い）', () => {
+      expect(calculateMarkdownTextWidth('abc\ndef')).toBe(10) // 3 + 4 + 3 = 10
+      expect(calculateMarkdownTextWidth('あいう\nえお')).toBe(14) // 6 + 4 + 4 = 14
+      expect(calculateMarkdownTextWidth('a\nb\nc')).toBe(11) // 1 + 4 + 1 + 4 + 1 = 11
+    })
+
+    it('複数の改行を含む文字列の幅が正しく計算されること', () => {
+      expect(calculateMarkdownTextWidth('abc\n\ndef')).toBe(14) // 3 + 4 + 0 + 4 + 3 = 14
+      expect(calculateMarkdownTextWidth('\n\n\n')).toBe(12) // 0 + 4 + 0 + 4 + 0 + 4 = 12
+    })
+
+    it('改行による折り返しを無視して計算されること', () => {
+      // 通常の計算では最大幅を使用するが、Markdown用は全行の合計
+      const normalText = 'short\nvery long line\nmedium';
+      
+      // 通常の計算では 'very long line' の幅が使用される
+      const normalWidth = Math.max(
+        calculateTextWidth('short'),
+        calculateTextWidth('very long line'),
+        calculateTextWidth('medium')
+      );
+      
+      // Markdown用は全行の合計（改行を<br>として）
+      const markdownWidth = calculateMarkdownTextWidth(normalText);
+      
+      // Markdown用の幅は全行の合計なので、通常の計算より大きくなる
+      expect(markdownWidth).toBeGreaterThan(normalWidth);
+      expect(markdownWidth).toBe(
+        calculateTextWidth('short') + 4 + 
+        calculateTextWidth('very long line') + 4 + 
+        calculateTextWidth('medium')
+      );
     })
   })
 }) 
