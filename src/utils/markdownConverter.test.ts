@@ -14,8 +14,7 @@ describe('markdownConverter', () => {
       [{ value: 'データ1', isEditing: false }, { value: 'データ2', isEditing: false }]
     ]
     
-    const expected = '| セル1 | セル2 |\n|---|---|\n| データ1 | データ2 |';
-    expect(convertToMarkdown(data)).toBe(expected);
+    expect(convertToMarkdown(data)).toBe('| セル1 | セル2 |\n|-----|-----|\n| データ1 | データ2 |');
   })
 
   it('改行が正しく変換されること', () => {
@@ -42,8 +41,7 @@ describe('markdownConverter', () => {
       [{ value: '値1\n', isEditing: false }, { value: '値2\n\n', isEditing: false }]
     ]
     
-    const expected = '| ヘッダー1 | ヘッダー2 |\n|---|---|\n| 値1 | 値2 |';
-    expect(convertToMarkdown(data)).toBe(expected);
+    expect(convertToMarkdown(data)).toBe('| ヘッダー1 | ヘッダー2 |\n|---------|---------||\n| 値1 | 値2 |'.replace('||', '|'));
   })
 
   it('異なる改行コード（CR、CRLF）が正しく処理されること', () => {
@@ -52,7 +50,26 @@ describe('markdownConverter', () => {
       [{ value: '値1\r\n改行後', isEditing: false }, { value: '値2\r改行後', isEditing: false }]
     ]
     
-    const expected = '| ヘッダー1 | ヘッダー2 |\n|---|---|\n| 値1<br>改行後 | 値2<br>改行後 |';
-    expect(convertToMarkdown(data)).toBe(expected);
+    expect(convertToMarkdown(data)).toBe('| ヘッダー1 | ヘッダー2 |\n|---------|---------||\n| 値1<br>改行後 | 値2<br>改行後 |'.replace('||', '|'));
+  })
+
+  it('文字サイズに応じてハイフンの数が変更されること', () => {
+    const data: TableData = [
+      [{ value: 'A', isEditing: false }, { value: '長いヘッダー', isEditing: false }, { value: '非常に長いヘッダーテキスト', isEditing: false }],
+      [{ value: '1', isEditing: false }, { value: '2', isEditing: false }, { value: '3', isEditing: false }]
+    ]
+    
+    const result = convertToMarkdown(data)
+    expect(result).toContain('|---|------------|--------------------------|');
+  })
+
+  it('マルチバイト文字の幅が正しく計算されること', () => {
+    const data: TableData = [
+      [{ value: 'ABC', isEditing: false }, { value: 'あいう', isEditing: false }, { value: 'ＡＢＣ', isEditing: false }],
+      [{ value: '1', isEditing: false }, { value: '2', isEditing: false }, { value: '3', isEditing: false }]
+    ]
+    
+    const result = convertToMarkdown(data)
+    expect(result).toContain('|---|------|------|');
   })
 }) 

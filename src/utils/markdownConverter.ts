@@ -1,4 +1,5 @@
 import { TableData, CellValue } from '../types/table'
+import { calculateTextWidth } from './cellWidthCalculator'
 
 /**
  * テーブルデータをMarkdown形式に変換
@@ -19,8 +20,12 @@ export const convertToMarkdown = (data: TableData): string => {
   // ヘッダー行
   let markdown = '| ' + headerRow.join(' | ') + ' |\n'
   
-  // 区切り行
-  markdown += '|' + headerRow.map(() => '---').join('|') + '|\n'
+  // 区切り行（文字の表示幅に応じてハイフンの数を調整）
+  markdown += '|' + headerRow.map(cell => {
+    // 文字列の表示幅に基づいてハイフンの数を決定（最低3つ）
+    const hyphenCount = Math.max(3, calculateTextWidth(cell));
+    return '-'.repeat(hyphenCount);
+  }).join('|') + '|\n'
   
   // データ行（ヘッダー行を除く）
   for (let i = 1; i < data.length; i++) {
