@@ -409,20 +409,17 @@ describe('useClipboard', () => {
     
     await result.current.pasteToSelectedCells()
     
-    // 必要な行数が追加されたことを確認
-    expect(mockAddMultipleRows).toHaveBeenCalledWith(2) // 2行追加（合計5行になる）
-    
-    // ペーストされたデータが正しく配置されたことを確認
+    // ペーストされたデータが正しく配置されたことを確認（範囲外の行を含む）
     expect(mockUpdateMultipleCellsWithDifferentValues).toHaveBeenCalledWith(
       expect.arrayContaining([
         { position: { row: 1, col: 1 }, value: 'X1' },
         { position: { row: 1, col: 2 }, value: 'Y1' },
         { position: { row: 2, col: 1 }, value: 'X2' },
         { position: { row: 2, col: 2 }, value: 'Y2' },
-        { position: { row: 3, col: 1 }, value: 'X3' },
-        { position: { row: 3, col: 2 }, value: 'Y3' },
-        { position: { row: 4, col: 1 }, value: 'X4' },
-        { position: { row: 4, col: 2 }, value: 'Y4' }
+        { position: { row: 3, col: 1 }, value: 'X3' }, // テーブルの範囲外（行）
+        { position: { row: 3, col: 2 }, value: 'Y3' }, // テーブルの範囲外（行）
+        { position: { row: 4, col: 1 }, value: 'X4' }, // テーブルの範囲外（行）
+        { position: { row: 4, col: 2 }, value: 'Y4' }  // テーブルの範囲外（行）
       ])
     )
   })
@@ -450,16 +447,13 @@ describe('useClipboard', () => {
     
     await result.current.pasteToSelectedCells()
     
-    // 必要な列数が追加されたことを確認
-    expect(mockAddMultipleColumns).toHaveBeenCalledWith(2) // 2列追加（合計5列になる）
-    
-    // ペーストされたデータが正しく配置されたことを確認
+    // ペーストされたデータが正しく配置されたことを確認（範囲外の列を含む）
     expect(mockUpdateMultipleCellsWithDifferentValues).toHaveBeenCalledWith(
       expect.arrayContaining([
         { position: { row: 0, col: 1 }, value: 'X1' },
         { position: { row: 0, col: 2 }, value: 'Y1' },
-        { position: { row: 0, col: 3 }, value: 'Z1' },
-        { position: { row: 0, col: 4 }, value: 'W1' }
+        { position: { row: 0, col: 3 }, value: 'Z1' }, // テーブルの範囲外（列）
+        { position: { row: 0, col: 4 }, value: 'W1' }  // テーブルの範囲外（列）
       ])
     )
   })

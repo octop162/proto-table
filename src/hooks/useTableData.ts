@@ -70,58 +70,44 @@ export const useTableData = (initialData: TableData) => {
   }, [data, updateDataWithHistory])
 
   /**
-   * 複数のセルの値を更新（各セルに異なる値）
-   * @param updates 更新するセルの位置と値のペアの配列
+   * 複数のセルを異なる値で更新
+   * @param updates 更新するセルの位置と値の配列
    */
-  const updateMultipleCellsWithDifferentValues = useCallback((updates: {position: Position, value: CellData['value']}[]) => {
+  const updateMultipleCellsWithDifferentValues = useCallback((updates: {position: Position, value: string}[]) => {
     const newData = [...data]
-
-    // 範囲外のpositionがあるかチェックし、必要に応じて行または列を追加
-    let maxRow = -1;
-    let maxCol = -1;
-
-    // 最大の行と列のインデックスを取得
-    updates.forEach(({ position }) => {
-      maxRow = Math.max(maxRow, position.row);
-      maxCol = Math.max(maxCol, position.col);
-    });
     
-    // 行数が足りない場合は追加
+    // 必要に応じて行を追加
+    const maxRow = Math.max(...updates.map(update => update.position.row))
     if (maxRow >= newData.length) {
-      const rowsToAdd = maxRow - newData.length + 1;
+      const rowsToAdd = maxRow - newData.length + 1
       for (let i = 0; i < rowsToAdd; i++) {
-        // 新しい行を追加（既存の列数と同じ幅で空のセルを作成）
-        const newRow = Array(newData[0].length).fill(0).map(() => ({
-          value: '',
-          isEditing: false
-        }));
-        newData.push(newRow);
+        const newRow = Array(newData[0].length).fill(0).map(() => ({ value: '', isEditing: false }))
+        newData.push(newRow)
       }
     }
     
-    // 列数が足りない場合は追加
+    // 必要に応じて列を追加
+    const maxCol = Math.max(...updates.map(update => update.position.col))
     if (maxCol >= newData[0].length) {
-      const colsToAdd = maxCol - newData[0].length + 1;
-      for (let rowIndex = 0; rowIndex < newData.length; rowIndex++) {
+      const colsToAdd = maxCol - newData[0].length + 1
+      newData.forEach(row => {
         for (let i = 0; i < colsToAdd; i++) {
-          newData[rowIndex].push({
-            value: '',
-            isEditing: false
-          });
+          row.push({ value: '', isEditing: false })
         }
-      }
+      })
     }
-
+    
+    // セルを更新
     updates.forEach(({ position, value }) => {
-      // テーブルの範囲内かチェック
-      if (position.row >= 0 && position.row < newData.length && 
-          position.col >= 0 && position.col < newData[0].length) {
-        newData[position.row][position.col] = {
-          ...newData[position.row][position.col],
+      const { row, col } = position
+      if (row >= 0 && row < newData.length && col >= 0 && col < newData[0].length) {
+        newData[row][col] = {
+          ...newData[row][col],
           value
         }
       }
     })
+    
     updateDataWithHistory(newData, HistoryActionType.MULTIPLE_CELLS_UPDATE)
   }, [data, updateDataWithHistory])
 
@@ -267,39 +253,10 @@ export const useTableData = (initialData: TableData) => {
   }, [data, updateDataWithHistory])
 
   /**
-   * 文字列データをテーブルにペースト
-   * @param text ペーストするテキスト
-   * @param startRow 開始行
-   * @param startCol 開始列
-   */
-  const pasteData = useCallback((text: string, startRow: number, startCol: number) => {
-    const rows = text.split('\n').filter(row => row.trim() !== '')
-    const newData = [...data]
-
-    rows.forEach((row, rowOffset) => {
-      const cells = row.split('\t')
-      cells.forEach((cellValue, colOffset) => {
-        const targetRow = startRow + rowOffset
-        const targetCol = startCol + colOffset
-
-        // テーブルの範囲内かチェック
-        if (targetRow < newData.length && targetCol < newData[0].length) {
-          newData[targetRow][targetCol] = {
-            ...newData[targetRow][targetCol],
-            value: cellValue
-          }
-        }
-      })
-    })
-
-    updateDataWithHistory(newData, HistoryActionType.PASTE)
-  }, [data, updateDataWithHistory])
-
-  /**
    * 選択範囲のデータをコピー
    * @param startPos 開始位置
    * @param endPos 終了位置
-   * @returns コピーしたデータの文字列
+   * @returns タブと改行で区切られたテキスト
    */
   const copyData = useCallback((startPos: Position, endPos: Position): string => {
     const minRow = Math.min(startPos.row, endPos.row)
@@ -352,7 +309,6 @@ export const useTableData = (initialData: TableData) => {
     addMultipleColumns,
     removeRow,
     removeColumn,
-    pasteData,
     copyData,
     undoAction,
     redoAction,

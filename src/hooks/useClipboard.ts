@@ -22,8 +22,6 @@ export const useClipboard = ({
   updateMultipleCells,
   updateMultipleCellsWithDifferentValues,
   getSelectedCellPositions,
-  addMultipleRows,
-  addMultipleColumns,
 }: UseClipboardProps) => {
   /**
    * セルの値をExcel形式でフォーマット
@@ -204,62 +202,6 @@ export const useClipboard = ({
          (isSingleColumn && selectionColCount > 1) ||
          (isSingleCell && (selectionRowCount > 1 || selectionColCount > 1)));
       
-      // 必要に応じて行を追加
-      let rowsToAdd = 0;
-      let maxTargetRow = 0;
-      
-      if (needsRepeatedPaste) {
-        if (isSingleRow) {
-          // 横一列のデータを縦に繰り返す場合
-          maxTargetRow = startRow + selectionRowCount - 1;
-        } else if (isSingleColumn) {
-          // 縦一列のデータを横に繰り返す場合
-          maxTargetRow = startRow + clipboardRowCount - 1;
-        } else if (isSingleCell) {
-          // 単一セルのコピーを複数選択したセルにペースト
-          maxTargetRow = Math.max(...getSelectedCellPositions().map(pos => pos.row));
-        }
-      } else {
-        // 通常のペースト
-        maxTargetRow = startRow + clipboardRowCount - 1;
-      }
-      
-      // テーブルの行数が足りない場合は追加
-      if (maxTargetRow >= tableData.length) {
-        rowsToAdd = maxTargetRow - tableData.length + 1;
-        if (rowsToAdd > 0) {
-          addMultipleRows(rowsToAdd);
-        }
-      }
-      
-      // 必要に応じて列を追加
-      let colsToAdd = 0;
-      let maxTargetCol = 0;
-      
-      if (needsRepeatedPaste) {
-        if (isSingleRow) {
-          // 横一列のデータを縦に繰り返す場合
-          maxTargetCol = startCol + clipboardColCount - 1;
-        } else if (isSingleColumn) {
-          // 縦一列のデータを横に繰り返す場合
-          maxTargetCol = startCol + selectionColCount - 1;
-        } else if (isSingleCell) {
-          // 単一セルのコピーを複数選択したセルにペースト
-          maxTargetCol = Math.max(...getSelectedCellPositions().map(pos => pos.col));
-        }
-      } else {
-        // 通常のペースト
-        maxTargetCol = startCol + clipboardColCount - 1;
-      }
-      
-      // テーブルの列数が足りない場合は追加
-      if (maxTargetCol >= tableData[0].length) {
-        colsToAdd = maxTargetCol - tableData[0].length + 1;
-        if (colsToAdd > 0) {
-          addMultipleColumns(colsToAdd);
-        }
-      }
-      
       // ペーストするデータを準備
       const updates: {position: Position, value: string}[] = [];
       
@@ -327,7 +269,7 @@ export const useClipboard = ({
     } catch (err) {
       console.error('クリップボードからの読み取りに失敗しました:', err);
     }
-  }, [currentCell, tableData, updateMultipleCellsWithDifferentValues, selectedCells, parseCellValueFromExcel, getSelectedCellPositions, addMultipleRows, addMultipleColumns]);
+  }, [currentCell, tableData, updateMultipleCellsWithDifferentValues, selectedCells, parseCellValueFromExcel, getSelectedCellPositions]);
 
   return {
     copySelectedCells,

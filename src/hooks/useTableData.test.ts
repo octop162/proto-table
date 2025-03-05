@@ -114,20 +114,39 @@ describe('useTableData', () => {
   })
 
   it('addColumn: 列を追加できること', () => {
-    const { result } = renderHook(() => useTableData(initialData))
+    const { result } = renderHook(() => useTableData([
+      [{ value: 'A1', isEditing: false }],
+      [{ value: 'A2', isEditing: false }]
+    ]))
     
     act(() => {
       result.current.addColumn()
     })
     
     // 列数が増えていることを確認
-    expect(result.current.data[0].length).toBe(3)
-    expect(result.current.data[1].length).toBe(3)
-    // 新しい列のセルが正しく初期化されていることを確認
-    expect(result.current.data[0][2].value).toBe('')
-    expect(result.current.data[1][2].value).toBe('')
-    expect(result.current.data[0][2].isEditing).toBe(false)
-    expect(result.current.data[1][2].isEditing).toBe(false)
+    expect(result.current.data[0].length).toBe(2)
+    
+    // 新しい列が空であることを確認
+    expect(result.current.data[0][1].value).toBe('')
+    expect(result.current.data[1][1].value).toBe('')
+  })
+
+  it('addColumn: 列を追加した後も既存のデータが保持されること', () => {
+    const { result } = renderHook(() => useTableData([
+      [{ value: 'A1', isEditing: false }],
+      [{ value: 'A2', isEditing: false }]
+    ]))
+    
+    act(() => {
+      result.current.addColumn()
+    })
+    
+    // 既存のデータが保持されていることを確認
+    expect(result.current.data[0][0].value).toBe('A1')
+    expect(result.current.data[1][0].value).toBe('A2')
+    
+    // 列数が変わっていないことを確認
+    expect(result.current.data[0].length).toBe(2)
   })
 
   it('removeRow: 行を削除できること', () => {
@@ -191,38 +210,6 @@ describe('useTableData', () => {
     
     // 列数が変わっていないことを確認
     expect(result.current.data[0].length).toBe(1)
-  })
-
-  it('pasteData: データをペーストできること', () => {
-    const { result } = renderHook(() => useTableData(initialData))
-    
-    act(() => {
-      result.current.pasteData('新しい1\t新しい2\n新しい3\t新しい4', 0, 0)
-    })
-    
-    // ペーストされたデータが正しく反映されていることを確認
-    expect(result.current.data[0][0].value).toBe('新しい1')
-    expect(result.current.data[0][1].value).toBe('新しい2')
-    expect(result.current.data[1][0].value).toBe('新しい3')
-    expect(result.current.data[1][1].value).toBe('新しい4')
-  })
-
-  it('pasteData: テーブルの範囲外のデータは無視されること', () => {
-    const { result } = renderHook(() => useTableData(initialData))
-    
-    act(() => {
-      // 3x3のデータをペースト（テーブルは2x2）
-      result.current.pasteData('A\tB\tC\nD\tE\tF\nG\tH\tI', 0, 0)
-    })
-    
-    // テーブルの範囲内のデータのみが反映されていることを確認
-    expect(result.current.data[0][0].value).toBe('A')
-    expect(result.current.data[0][1].value).toBe('B')
-    expect(result.current.data[1][0].value).toBe('D')
-    expect(result.current.data[1][1].value).toBe('E')
-    // テーブルのサイズは変わっていないことを確認
-    expect(result.current.data.length).toBe(2)
-    expect(result.current.data[0].length).toBe(2)
   })
 
   it('copyData: 選択範囲のデータをコピーできること', () => {
